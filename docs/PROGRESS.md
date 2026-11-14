@@ -17,6 +17,7 @@ Updated by the coordinator as lanes report. The source of truth for what is done
 | 2026-11-14 | Every `*_s` column is one-way walking seconds (CONTRACTS section 1). AED times are shown as round trip (2x) only through the thresholds helpers. |
 | 2026-11-14 | `propose_fix(building_id, asset_type="aed") -> str` added to CONTRACTS section 4. |
 | 2026-11-14 | Speaker scripts: spec section 3 wording verbatim, with each em-dash replaced by a comma. |
+| 2026-11-14 | Exit maps count `exit_sign` assets as exits (labeled approximation). red_frac excludes positions with no route. gap_score weights AED 0.5, extinguisher 0.25, exit 0.25 kept. |
 | 2026-11-14 | Supabase: the team lead is creating a hosted project; keys go in the untracked root `.env`, plus `SUPABASE_DB_URL` for applying migrations. |
 
 ## Subtask status
@@ -25,26 +26,28 @@ Legend: done = pushed and verified offline; partial = pushed, more to do; -- = n
 
 | ID | Status | Notes |
 |---|---|---|
-| 1.1 | done | 18d95c7 (types, lock), 484e7e0 (config, db, events, thresholds, geo, llm) |
-| 1.2 | done offline | 5d41e4a. Realtime check needs the hosted project |
-| 1.3 | done offline | a6e3940. Load into the hosted project pending keys |
+| 1.1 | done | 18d95c7, 484e7e0 |
+| 1.2 | done offline | 5d41e4a (adds 0004_run_cost.sql). Realtime check needs the hosted project |
+| 1.3 | done offline | a6e3940 |
 | 1.4, 1.5, 1.8 | blocked | need CoStar dataset access |
-| 1.6, 1.7 | -- | 1.7 offline part only until the dataset arrives |
-| 2.1 to 2.5 | done offline | a376a6b, 6f3d0ac (IBC 2021 Table 1004.5, unverified), 2d40124, 8b4122b, 00a816d |
-| 2.6 to 2.8 | -- | |
+| 1.6 | done | 30aae3b |
+| 1.7 | partial | e5468ab, 866f50d. bulk.py held in Agent 1's worktree until a census wiring test is relaxed. Real building needs dataset + keys |
+| 2.1 to 2.8 | done offline | a376a6b, 6f3d0ac, 2d40124, 8b4122b, 00a816d, ed563ea, a03cfec, f9f6130, 3ef0f03. Follow-up: exit_sign as exit, red_frac over reachable |
 | 3.1, 3.2 | done offline | 0629313, 14ce667 |
-| 3.3 to 3.8 | -- | |
+| 3.3 to 3.8 | in progress | |
 | 4.1 | done | 4bbb297 |
-| 4.2 to 4.5 | -- | 4.6 needs Twilio; 4.7 needs 2.8 |
-| 5.1, 5.2 | done | 2af4e8d, bc7ad29 |
-| 5.3, 5.4 | -- | 5.4 clips need humans |
-| 5.5 to 5.8 | done offline | 3a741e9, 8fa3349, a66581d, 6285bf1. Device steps in mobile/README.md. Follow-up: adopt seeded responder by phone |
+| 4.2 to 4.8 | in progress | 4.6 needs Twilio |
+| 5.1 to 5.3 | done offline | 2af4e8d, 1d6babb, bc7ad29, 1454252, 53d7973. Live webcam steps in vision/README.md |
+| 5.4 | code done | 0ec1961. Six clips need humans |
+| 5.5 to 5.8 | done offline | 3a741e9, 8fa3349, a66581d, 6285bf1, 2d27b2f. Device steps in mobile/README.md |
 
 Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec section 3 template adds it).
 
 ## Waiting on a person
 
-- Hosted Supabase project keys in `.env` (team lead, in progress).
+- Hosted Supabase project keys in `.env` (team lead, in progress), then apply migrations 0001 to 0004.
+- Bedrock model access for Sonnet 5.5 and Haiku 5.5 (access-controlled), or an Anthropic API key.
+- Someone to check the occupancy factors against the ICC text of IBC 2021 Table 1004.5.
 - Anthropic API key or AWS Bedrock credentials (AWS also covers Polly).
 - Twilio account (4.6), CoStar dataset access (1.4, 1.5, 1.7, 1.8).
 - Recording the six vision clips (5.4); a real phone for the mobile checks.

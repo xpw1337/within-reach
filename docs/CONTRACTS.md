@@ -9,6 +9,8 @@ Everything here crosses a lane boundary. Change it only together with the lanes 
 - Coordinates in `twin_nodes` and `assets` are the scan's model space in meters. `y` is up; floor plans are drawn from `x` and `z`.
 - `coverage.time_s`: one-way walking seconds from that sweep to the nearest asset of that type. `NULL` means no asset of that type is visible in the scan, or it is unreachable on the graph.
 - Every `*_s` column is one-way walking seconds, the same unit as `coverage.time_s`: `building_scores.aed_worst_s`, `ext_worst_s`, `exit_worst_s` and `fixes.before_worst_s`, `after_worst_s` included. Anything that shows an AED time to a person (UI, documents, speaker) converts to round trip (2x) through the thresholds helper (`shared/thresholds.py`, `dashboard/lib/thresholds.ts`), never inline.
+- Exit maps count assets of type `exit` and `exit_sign` (the Scanner finds signs, not doors). User-facing wording is "exit sign visible in the scan"; distances to exits are an approximation because directional signs count too.
+- `*_red_frac` is red positions divided by positions that can reach at least one asset of that type on the graph. Positions with no route are left out and shown as unknown. A building with no asset of that type visible in the scan still gets `1.0`.
 - HTTP errors: `{"detail": "<message>"}` with a 4xx or 5xx status.
 - All HTTP bodies are JSON except Twilio webhooks (form-encoded in, TwiML XML out).
 
