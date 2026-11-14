@@ -32,7 +32,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-vision = ["opencv-python", "ultralytics"]
+vision = ["opencv-python", "ultralytics", "lap>=0.5.12"]
 dev = ["pytest", "pytest-asyncio", "ruff"]
 
 [tool.setuptools.packages.find]
