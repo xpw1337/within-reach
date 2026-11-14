@@ -2,7 +2,8 @@
 
 Choices made from the environment:
 - store: Supabase when ``SUPABASE_URL`` and ``SUPABASE_SERVICE_ROLE_KEY`` are set, else in-memory dev fixture
-- telephony: Twilio when its credentials and ``PUBLIC_BASE_URL`` are set, else FakeTelephony (no calls)
+- telephony: Twilio when its credentials and ``PUBLIC_BASE_URL`` are set, else FakeTelephony (no calls);
+  through the Photon number over SIP when every ``PHOTON_SIP_*`` setting and ``PHOTON_NUMBER`` are set
 - TTS: Polly when ``TTS_PROVIDER=polly`` and AWS credentials exist; macOS ``say`` otherwise on a Mac
 """
 
@@ -69,15 +70,32 @@ def default_tts() -> Any:
     return FakeTTS()
 
 
+def photon_sip() -> Any:
+    """``PhotonSip`` when all four PHOTON_SIP_* / PHOTON_NUMBER settings are set, else None."""
+    from agent.io.telephony import PhotonSip
+
+    s = settings()
+    values = (s.photon_sip_server, s.photon_sip_username, s.photon_sip_password, s.photon_number)
+    if all(values):
+        return PhotonSip(server=s.photon_sip_server, username=s.photon_sip_username,
+                         password=s.photon_sip_password, number=s.photon_number)
+    if any(values):
+        log.warning("Photon SIP needs PHOTON_SIP_SERVER, PHOTON_SIP_USERNAME, PHOTON_SIP_PASSWORD and "
+                    "PHOTON_NUMBER; calls use the Twilio number")
+    return None
+
+
 def default_telephony() -> Any:
     from agent.io.telephony import FakeTelephony, TwilioTelephony
 
     s = settings()
-    if s.twilio_account_sid and s.twilio_auth_token and s.twilio_from_number and s.public_base_url:
+    sip = photon_sip()
+    if s.twilio_account_sid and s.twilio_auth_token and s.public_base_url and (sip or s.twilio_from_number):
+        log.info("calls go out through %s", "the Photon number over SIP" if sip else "the Twilio number")
         return TwilioTelephony(account_sid=s.twilio_account_sid, auth_token=s.twilio_auth_token,
                                from_number=s.twilio_from_number, public_base_url=s.public_base_url,
                                dispatch_sim_number=s.dispatch_sim_number,
-                               ring_timeout_s=int(s.accept_timeout_seconds))
+                               ring_timeout_s=int(s.accept_timeout_seconds), sip=sip)
     log.warning("Twilio not configured: calls are recorded by FakeTelephony, nothing rings")
     return FakeTelephony(dispatch_sim_number=s.dispatch_sim_number or "+15550001111")
 

@@ -861,6 +861,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_run_cost: {
+        Args: { p_delta: number; p_run_id: string }
+        Returns: number
+      }
       dearmor: { Args: { "": string }; Returns: string }
       gen_random_uuid: { Args: Record<PropertyKey, never>; Returns: string }
       gen_salt: { Args: { "": string }; Returns: string }
@@ -881,7 +885,7 @@ export type Database = {
         | "first_aid"
         | "stairs"
         | "elevator"
-      dispatch_channel: "app" | "call" | "speaker" | "broadcast"
+      dispatch_channel: "app" | "call" | "speaker" | "broadcast" | "imessage"
       dispatch_role: "patient" | "aed_runner" | "staff" | "broadcast"
       dispatch_status:
         | "sent"
@@ -1039,7 +1043,7 @@ export const Constants = {
         "stairs",
         "elevator",
       ],
-      dispatch_channel: ["app", "call", "speaker", "broadcast"],
+      dispatch_channel: ["app", "call", "speaker", "broadcast", "imessage"],
       dispatch_role: ["patient", "aed_runner", "staff", "broadcast"],
       dispatch_status: [
         "sent",

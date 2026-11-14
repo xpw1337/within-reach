@@ -72,6 +72,15 @@ class Settings(BaseSettings):
     dispatch_sim_number: str | None = None  # a teammate's phone, never a real emergency number
     public_base_url: str | None = None
 
+    # --- Photon 2.0 (iMessage + voice over SIP). All optional: empty means disabled. ---
+    photon_api_key: str | None = None  # project API key (pho_sk_...)
+    photon_project_id: str | None = None  # pho_prj_...
+    photon_webhook_secret: str | None = None  # whsec_... of the destination at /photon/webhook
+    photon_number: str | None = None  # voice-enabled Photon number (E.164), the caller ID over SIP
+    photon_sip_server: str | None = None  # Voice profile "SIP connection" host:TLS port, e.g. sip.photon.codes:5061
+    photon_sip_username: str | None = None  # Voice profile outbound username
+    photon_sip_password: str | None = None  # Voice profile outbound password (digest MD5 for Twilio)
+
     # --- Datasets ---
     matterport_sdk_key: str | None = None
     costar_data_path: str | None = None  # unset means the fallback building is used
