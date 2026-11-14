@@ -61,8 +61,7 @@ Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec 
 
 ## Waiting on a person
 
-- Photon voice number: buying a US SMS number through the API returned 402 ENTITLEMENT_REQUIRED on the Messaging Free plan (nothing was charged; credit still $100.00). Needs the team lead to check Photon billing (payment method or plan) or ask Photon on Discord; then the Voice profile with MD5 outbound and the four PHOTON_NUMBER / PHOTON_SIP_* values.
-- Photon iMessage: assign the shared line to each responder phone and the sim-911 phone, and have each text the line once; webhook destination at PUBLIC_BASE_URL/photon/webhook with its secret in PHOTON_WEBHOOK_SECRET (steps in agent/README.md).
+- Photon is set up for solo testing (values only in the untracked `.env` and `supabase/seed.local.sql`): a voice-enabled number with the default SIP Voice profile and MD5 outbound; the team lead's phone is on the shared iMessage line and plays teammate A, the caller of record and the sim-911 dispatcher. Still needed: that phone texts its assigned shared line once (opt-in is pending), a Twilio account (it runs the calls), and the webhook destination once the tunnel exists. Swap the dispatcher to a teammate's phone before the real demo.
 
 - Bedrock model access for Sonnet 5.5 and Haiku 5.5 (access-controlled), or an Anthropic API key.
 - Someone to check the occupancy factors against the ICC text of IBC 2021 Table 1004.5.
