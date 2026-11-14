@@ -46,6 +46,7 @@ Everything here crosses a lane boundary. Change it only together with the lanes 
 | `POST /twilio/voice/{dispatch_id}` | Twilio form | TwiML: situation, role, AED location, gather 1 digit |
 | `POST /twilio/gather/{dispatch_id}` | Twilio form (`Digits`) | TwiML; `1` = accept, `2` = decline |
 | `POST /twilio/briefing/{incident_id}` | Twilio form | TwiML: the 911 briefing, spoken twice |
+| `POST /photon/webhook` | Photon webhook event (signature verified with `PHOTON_WEBHOOK_SECRET`) | `{ok:true}`. An inbound iMessage from a responder maps to their open dispatch: `1` accept, `2` decline, `here` arrived |
 | `POST /simulate/{cardiac\|fall\|outdoor}` | `{camera_id?}` | `{incident_id}` (injects the same event vision would send) |
 | `POST /reset` | | `{ok:true}` clears incidents, events, dispatches; cancels timers; hangs up calls |
 | `GET /health` | | `{ok, warmed:{llm, tts, db}, metrics}` (`metrics` holds the last measured event-to-audio latency) |
@@ -55,6 +56,11 @@ Rules:
 - One open incident per camera. A second `person_down` from the same camera while one is open returns the existing `incident_id`.
 - `responsive`, `possible_seizure` and `responder_arrived` events for a camera with no open incident are ignored with `{incident_id:null, status:"ignored"}`.
 - Every command is idempotent: repeating it returns the current state, never an error.
+
+### Photon 2.0 (approved 2026-11-14)
+
+- Voice: Twilio still runs every call and its TwiML webhooks; when `PHOTON_SIP_*` is set, calls are placed through the Photon number over SIP (`To=sip:<number>@<PHOTON_SIP_SERVER>;transport=tls`, `From=PHOTON_NUMBER`, SIP auth from the Photon Voice profile). The 911 refusal applies to the underlying number.
+- iMessage: sent with Photon's REST API (`POST /v1/projects/{id}/messages`). Only to `DISPATCH_SIM_NUMBER` or a `callable` responder with `consent_calls`, under the same allowlist as calls. A responder alert goes out alongside the app alert and the call, on the same `dispatches` row; the row's `channel` is `imessage` only when no call was placed. After a role is assigned, a follow-up iMessage carries the route and asks for `here` on arrival. The 911 briefing is also sent as text to `DISPATCH_SIM_NUMBER` after it is spoken.
 
 ## 3. Realtime and event streams
 
