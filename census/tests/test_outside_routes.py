@@ -22,7 +22,8 @@ def test_directions_on_synthetic_two_floor_building():
     r = shortest_route(g, "b0", ["a0"])
     assert route_directions(g, r) == "take the elevator down one floor, past the front desk, near the main entrance"
     text = describe_route(g, r, "left of the main doors")
-    assert text.startswith("27 meters, ") and text.endswith("left of the main doors")
+    assert text == "take the elevator down one floor, past the front desk, left of the main doors"
+    assert "meters" not in text
     assert route_directions(g, shortest_route(g, "a1", ["a1"])) == "near the front desk"
 
 

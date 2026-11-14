@@ -2,8 +2,9 @@
 
 Landmark-based on purpose: we do not know which way the listener is facing, so there is no
 "turn left". The phrase names floor changes, up to two labeled places passed on the way, and the
-destination's label. ``route_directions`` has no distance (the speaker template already says
-"{aed_distance} meters, {aed_directions}"); ``describe_route`` prefixes the distance.
+destination's label. It never contains the distance: the speaker template already says
+"{aed_distance} meters, {aed_directions}" and the distance comes from ``Route.distance_m``
+(docs/CONTRACTS.md section 4).
 """
 
 from __future__ import annotations
@@ -69,5 +70,5 @@ def route_directions(graph: nx.Graph, route: Route, dest_label: str | None = Non
 
 
 def describe_route(graph: nx.Graph, route: Route, dest_label: str | None = None) -> str:
-    """'14 meters, by the front desk' (docs/CONTRACTS.md section 4)."""
-    return f"{round(route.distance_m)} meters, {route_directions(graph, route, dest_label)}"
+    """Directions without the distance, for example "left of the elevators" (CONTRACTS section 4)."""
+    return route_directions(graph, route, dest_label)

@@ -11,7 +11,7 @@ distance in meters along ``path``.
 
 from __future__ import annotations
 
-from census.core.directions import route_directions
+from census.core.directions import describe_route
 from census.core.graph import shortest_route
 from census.tools import db
 from census.tools.events import result, tool_call, warning
@@ -44,7 +44,7 @@ def precompute_camera_routes(camera_id: str) -> None:
         dest = next(a for a in assets if a["sweep_id"] == route.path[-1])
         rows.append({"camera_id": camera_id, "target": target, "path": route.path,
                      "distance_m": round(route.distance_m, 1),
-                     "directions": route_directions(loaded.graph, route, dest.get("label")),
+                     "directions": describe_route(loaded.graph, route, dest.get("label")),
                      "audio_url": None})
     if rows:
         db.upsert("camera_routes", rows, on_conflict="camera_id,target")
