@@ -23,7 +23,7 @@ async def ctx(tmp_path):
 async def test_health_and_thresholds(ctx):
     rt, c = ctx
     r = await c.get("/health")
-    assert r.status_code == 200 and set(r.json()) == {"ok", "warmed"}
+    assert r.status_code == 200 and {"ok", "warmed"} <= set(r.json())
     assert set(r.json()["warmed"]) == {"llm", "tts", "db"}
     r = await c.get("/config/thresholds")
     assert r.status_code == 200
@@ -147,3 +147,39 @@ async def test_render_camera_audio_with_fakes(tmp_path):
     assert ("audio", "cam-test/voice_check.mp3") in uploads
     assert store.routes[("cam-test", "aed")]["audio_url"].endswith("cam-test/cardiac_main.mp3")
     assert (tmp_path / "cam-test" / "voice_check.mp3").exists()
+
+
+async def test_census_routes_call_census_run(ctx, monkeypatch):
+    _, c = ctx
+    import census.run
+    import census.tools.fixer
+
+    calls = []
+    monkeypatch.setattr(census.run, "start_run", lambda *a, **k: calls.append(("start", a)) or "run-1")
+    monkeypatch.setattr(census.run, "stop_run", lambda *a, **k: calls.append(("stop", a)))
+    monkeypatch.setattr(census.run, "rerun_building", lambda *a, **k: calls.append(("rerun", a)) or "run-2")
+    monkeypatch.setattr(census.tools.fixer, "propose_fix", lambda *a, **k: calls.append(("fix", a)) or "fix-1")
+    r = await c.post("/census/runs", json={"buildings_target": 20, "city": "Houston", "budget_usd": 5})
+    assert r.json() == {"run_id": "run-1"}
+    assert (await c.post("/census/runs/run-1/stop")).json() == {"status": "stopping"}
+    assert (await c.post("/census/buildings/b1/rerun")).json() == {"run_id": "run-2"}
+    r = await c.post("/census/buildings/b1/fix", json={"asset_type": "extinguisher"})
+    assert r.json() == {"fix_id": "fix-1"}
+    assert calls == [("start", (20, "Houston", None, 5.0)), ("stop", ("run-1",)), ("rerun", ("b1",)),
+                     ("fix", ("b1", "extinguisher"))]
+
+
+async def test_verify_hard_timeout_when_llm_hangs():
+    import time as _time
+
+    from agent.io.verify import SceneVerifier, VerifyError
+
+    def hanging(**kwargs):
+        _time.sleep(2)
+        return {}
+
+    v = SceneVerifier(timeout_s=0.2, complete_json=hanging)
+    t0 = _time.perf_counter()
+    with pytest.raises(VerifyError, match="timed out"):
+        await v.verify(b"jpeg")
+    assert _time.perf_counter() - t0 < 1.0

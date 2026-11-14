@@ -9,7 +9,9 @@ router = APIRouter()
 
 @router.get("/health")
 async def health(request: Request) -> dict:
-    return {"ok": True, "warmed": dict(request.app.state.warmed)}
+    rt = request.app.state.runtime
+    # "metrics" is an addition to the contract shape: the last measured event-to-audio latency.
+    return {"ok": True, "warmed": dict(request.app.state.warmed), "metrics": dict(getattr(rt, "metrics", {}))}
 
 
 @router.get("/config/thresholds")
