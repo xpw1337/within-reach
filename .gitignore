@@ -1,0 +1,36 @@
+# secrets
+.env
+.env.*
+!.env.example
+supabase/seed.local.sql
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+
+# node
+node_modules/
+.next/
+.expo/
+dist/
+out/
+
+# local data and caches
+.cache/
+data/raw/
+*.sqlite
+*.sqlite-*
+*.pt
+
+# large media
+demo/recordings/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

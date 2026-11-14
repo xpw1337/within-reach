@@ -1,0 +1,46 @@
+[project]
+name = "within-reach"
+version = "0.1.0"
+description = "Life-safety census of real buildings, and the live response it powers"
+requires-python = ">=3.11"
+
+# Versions are intentionally unpinned: the first implementer runs `uv sync`,
+# confirms everything resolves, and commits uv.lock.
+dependencies = [
+    "pydantic>=2",
+    "pydantic-settings",
+    "python-dotenv",
+    "supabase",
+    "httpx",
+    "anthropic",
+    "boto3",
+    "langchain",
+    "langchain-anthropic",
+    "langchain-aws",
+    "langgraph",
+    "langgraph-checkpoint-sqlite",
+    "langsmith",
+    "deepagents",
+    "networkx",
+    "numpy",
+    "pillow",
+    "py360convert",
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+    "twilio",
+]
+
+[project.optional-dependencies]
+vision = ["opencv-python", "ultralytics"]
+dev = ["pytest", "pytest-asyncio", "ruff"]
+
+[tool.setuptools.packages.find]
+include = ["shared*", "data*", "census*", "agent*", "vision*"]
+
+[tool.pytest.ini_options]
+testpaths = ["shared", "census", "agent", "vision"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 110
