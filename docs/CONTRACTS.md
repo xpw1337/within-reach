@@ -87,8 +87,12 @@ Payloads the frontends rely on:
 - `classified`: `{type, modifiers[], scene_safe, hazards[]}`.
 - `timer_started`: `{timer, fires_at}`.
 - `ems_briefed`: `{briefing_text, ems_door}`.
+- `voice_check_result`: `{responsive}`.
+- `verify_result`: `{is_emergency, scene_safe, hazards[], modifiers[], error?}` (after the allowlist filter).
+- `dispatch_sent`, `dispatch_accepted`, `dispatch_declined`, `dispatch_timeout`, `dispatch_released`: `{dispatch_id, responder_id, role, wave, channel, call_sid?}`.
+- `timer_fired`: `{timer}`. Timer names are the ones in `agent/DESIGN.md` (`voice_check`, `confirm_auto`, `found_down_escalate`, `wave_{n}`, `fall_911`, `announce_repeat`, `guide_tick`).
 
-Latency metrics on `/live` are computed from `incidents` timestamps only (`collapse_at`, `first_instruction_at`, `confirmed_at`, `ems_notified_at`, `first_accept_at`, ...).
+Latency metrics on `/live` are computed from `incidents` timestamps only (`collapse_at`, `first_instruction_at`, `confirmed_at`, `ems_notified_at`, `first_accept_at`, ...). One exception: first ring is the earliest `dispatches.sent_at` for the incident with a non-null `call_sid` (the call is placed when the row is written); `agent/` sets `call_sid` on the dispatch row it calls.
 
 ### Mobile subscription
 
