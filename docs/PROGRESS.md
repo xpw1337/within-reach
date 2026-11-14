@@ -32,15 +32,16 @@ Legend: done = pushed and verified offline; partial = pushed, more to do; -- = n
 | 1.3 | done offline | a6e3940 |
 | 1.4, 1.5, 1.8 | blocked | need CoStar dataset access |
 | 1.6 | done | 30aae3b |
-| 1.7 | partial | e5468ab, 866f50d. bulk.py held in Agent 1's worktree until a census wiring test is relaxed. Real building needs dataset + keys |
-| 2.1 to 2.8 | done offline | a376a6b, 6f3d0ac, 2d40124, 8b4122b, 00a816d, ed563ea, a03cfec, f9f6130, 3ef0f03. Follow-up: exit_sign as exit, red_frac over reachable |
-| 3.1, 3.2 | done offline | 0629313, 14ce667 |
-| 3.3 to 3.8 | in progress | |
-| 4.1 to 4.5, 4.7 | done offline | 4bbb297, b86b69b, 1da8bbd, 1cac1c6, 1451d7a. Signal-inbox graph; event to audio median 2.5 ms locally. Follow-up: approved scripts |
+| 1.7 | done offline | e5468ab, 866f50d, bulk.py. One real building needs dataset + keys |
+| 2.1 to 2.8 | done offline | a376a6b to 3ef0f03; follow-ups 0abdddd, ab9c45a (exit signs as exits, red fraction over reachable positions, placement stays in the connected part with the equipment) |
+| 3.1 to 3.8 | done offline | 0629313 to 71fb735; follow-ups a085f76, 3dc92bb, 07638bd (first ring) |
+| 4.1 to 4.5, 4.7 | done offline | 4bbb297 to 1451d7a; follow-up 884586d (approved scripts, event payloads, call_sid) |
 | 4.6, 4.8 | partial | Real Twilio calls and collapse-to-first-ring need credentials and a human |
-| 5.1 to 5.3 | done offline | 2af4e8d, 1d6babb, bc7ad29, 1454252, 53d7973. Live webcam steps in vision/README.md |
+| 5.1 to 5.3 | done offline | 2af4e8d to 53d7973, 7821284. Live webcam steps in vision/README.md |
 | 5.4 | code done | 0ec1961. Six clips need humans |
-| 5.5 to 5.8 | done offline | 3a741e9, 8fa3349, a66581d, 6285bf1, 2d27b2f. Device steps in mobile/README.md |
+| 5.5 to 5.8 | done offline | 3a741e9 to 6285bf1, 2d27b2f (adopt seeded responder by phone). Device steps in mobile/README.md |
+
+Full Python suite on main: 339 passed, 2 skipped without the vision extra (2026-11-14).
 
 Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec section 3 template adds it).
 
