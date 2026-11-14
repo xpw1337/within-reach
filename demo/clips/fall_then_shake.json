@@ -1,0 +1,15 @@
+{
+  "clip": "fall_then_shake.mp4",
+  "scenario": "Stand for 3 s, collapse sideways onto the mat, then shake arms and legs rhythmically (about 2 to 4 times a second) for 10 s without raising a hand above the shoulder and holding it. Lie still for 5 s.",
+  "setup": "Camera about 2 m high over the taped zone, whole body in view; fall sideways across the frame onto a mat.",
+  "events": [
+    {
+      "kind": "person_down",
+      "witnessed": true
+    },
+    {
+      "kind": "possible_seizure"
+    }
+  ],
+  "allow_other_events": false
+}

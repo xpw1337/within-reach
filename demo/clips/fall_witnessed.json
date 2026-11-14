@@ -1,0 +1,12 @@
+{
+  "clip": "fall_witnessed.mp4",
+  "scenario": "Walk into the zone and stand still for 3 s. Collapse sideways onto the mat in one quick drop (under 2 s) and lie still for 15 s.",
+  "setup": "Camera about 2 m high over the taped zone, whole body in view; fall sideways across the frame onto a mat.",
+  "events": [
+    {
+      "kind": "person_down",
+      "witnessed": true
+    }
+  ],
+  "allow_other_events": false
+}

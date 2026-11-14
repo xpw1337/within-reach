@@ -1,0 +1,12 @@
+{
+  "clip": "lie_down_slowly.mp4",
+  "scenario": "Stand in the zone for 3 s. Lie down slowly over about 5 to 6 s (kneel, then lower yourself) and lie still for 15 s.",
+  "setup": "Camera about 2 m high over the taped zone, whole body in view; fall sideways across the frame onto a mat.",
+  "events": [
+    {
+      "kind": "person_down",
+      "witnessed": false
+    }
+  ],
+  "allow_other_events": false
+}

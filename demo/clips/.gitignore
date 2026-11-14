@@ -1,0 +1,6 @@
+# Clips show real people: keep them out of the repo unless everyone in them agrees.
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.m4v

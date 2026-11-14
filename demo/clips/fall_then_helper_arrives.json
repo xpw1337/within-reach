@@ -1,0 +1,15 @@
+{
+  "clip": "fall_then_helper_arrives.mp4",
+  "scenario": "Person A stands for 3 s, collapses sideways onto the mat and lies still. About 8 s later person B walks in from the edge of the frame and kneels right beside A for 10 s. A never raises a hand.",
+  "setup": "Camera about 2 m high over the taped zone, whole body in view; fall sideways across the frame onto a mat.",
+  "events": [
+    {
+      "kind": "person_down",
+      "witnessed": true
+    },
+    {
+      "kind": "responder_arrived"
+    }
+  ],
+  "allow_other_events": false
+}

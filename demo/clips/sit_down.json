@@ -1,0 +1,7 @@
+{
+  "clip": "sit_down.mp4",
+  "scenario": "Stand in the zone for 3 s. Sit on a chair for 30 s. Stand up, then sit on the floor with legs stretched out for 30 s. Never lie down.",
+  "setup": "Camera about 2 m high over the taped zone, whole body in view; fall sideways across the frame onto a mat.",
+  "events": [],
+  "allow_other_events": false
+}

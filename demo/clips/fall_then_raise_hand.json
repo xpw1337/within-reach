@@ -1,0 +1,15 @@
+{
+  "clip": "fall_then_raise_hand.mp4",
+  "scenario": "Stand for 3 s, collapse sideways onto the mat, lie still for 8 s (person_down fires about DOWN_SECONDS after landing). Then raise one arm straight up and hold it still for 3 s, lower it, and lie still for 5 s.",
+  "setup": "Camera about 2 m high over the taped zone, whole body in view; fall sideways across the frame onto a mat.",
+  "events": [
+    {
+      "kind": "person_down",
+      "witnessed": true
+    },
+    {
+      "kind": "responsive"
+    }
+  ],
+  "allow_other_events": false
+}
