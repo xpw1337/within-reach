@@ -159,8 +159,8 @@ function IncidentCard({ incident, camera, buildingName }: { incident: Incident; 
   );
 }
 
-function LatencyMetrics({ incident }: { incident: Incident }) {
-  const rows = latencies(incident);
+function LatencyMetrics({ incident, dispatches }: { incident: Incident; dispatches: Dispatch[] }) {
+  const rows = latencies(incident, dispatches);
   const origin = originOf(incident);
   return (
     <Panel title="Latency" right={<span className="text-xs text-muted">seconds {origin.label}</span>}>
@@ -410,7 +410,7 @@ export function LiveView() {
           <ConfirmBar incident={i} events={live.events} cmd={cmd} />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
             <IncidentCard incident={i} camera={camera} buildingName={building.building?.name ?? null} />
-            <LatencyMetrics incident={i} />
+            <LatencyMetrics incident={i} dispatches={live.dispatches} />
           </div>
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
             <RouteFlythrough camera={camera} routes={live.routes} speak={speak} buildingId={buildingId} />

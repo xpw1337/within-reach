@@ -1,6 +1,6 @@
 // Live-page logic on synthetic rows (test fixtures only).
 import { describe, expect, it } from "vitest";
-import { confirmState, describeEvent, fall911Timer, latencies, latestRouteSpeak, originOf } from "@/lib/incident";
+import { confirmState, describeEvent, fall911Timer, firstRingAt, latencies, latestRouteSpeak, originOf } from "@/lib/incident";
 import type { Incident, IncidentEvent } from "@/lib/rows";
 
 const base: Incident = {
@@ -42,6 +42,16 @@ describe("latencies", () => {
   it("measures from collapse when known", () => {
     expect(latencies(base)[0]).toMatchObject({ label: "First instruction", seconds: 5.5 });
     expect(latencies(base)[1].seconds).toBeNull();
+  });
+  it("takes first ring from the earliest dispatch with a call_sid", () => {
+    const d = [
+      { sent_at: "2026-11-14T20:00:09.000Z", call_sid: null },
+      { sent_at: "2026-11-14T20:00:12.000Z", call_sid: "CA2" },
+      { sent_at: "2026-11-14T20:00:11.000Z", call_sid: "CA1" },
+    ];
+    expect(firstRingAt(d)).toBe("2026-11-14T20:00:11.000Z");
+    expect(latencies(base, d).find((l) => l.key === "first_ring")?.seconds).toBe(11);
+    expect(firstRingAt([{ sent_at: base.created_at, call_sid: null }])).toBeNull();
   });
   it("falls back to detection for found-down incidents", () => {
     const i = { ...base, collapse_at: null };
@@ -90,11 +100,20 @@ describe("timeline wording", () => {
       "Classified cardiac + seizure",
     );
     expect(describeEvent(ev("dispatch_accepted", { responder_id: "r1", role: "aed_runner" }), who)).toBe(
-      "alert accepted: Sam as aed runner",
+      "Accepted: Sam as aed runner",
     );
-    expect(describeEvent(ev("voice_check_result", { responsive: false }), who)).toBe(
-      "voice check result (responsive: false)",
+    expect(
+      describeEvent(ev("dispatch_sent", { responder_id: "r1", role: "patient", wave: 1, channel: "call", call_sid: "CA1" }), who),
+    ).toBe("Alert sent to Sam as patient (wave 1, call, phone ringing)");
+    expect(describeEvent(ev("voice_check_result", { responsive: false }), who)).toBe("Voice check: no raised hand");
+    expect(
+      describeEvent(ev("verify_result", { is_emergency: true, scene_safe: false, hazards: ["traffic"], modifiers: ["breathing"] }), who),
+    ).toBe("Scene check: looks like an emergency, scene unsafe, + breathing, hazards: traffic");
+    expect(describeEvent(ev("verify_result", { error: "timeout" }), who)).toBe(
+      "Scene check failed (timeout); continuing without it",
     );
+    expect(describeEvent(ev("timer_fired", { timer: "fall_911" }), who)).toBe("Timer fired: fall 911");
+    expect(describeEvent(ev("mystery", { a: 1 }), who)).toBe("mystery (a: 1)");
   });
   it("finds the latest speak event with a route target", () => {
     const evs = [ev("speak", { script_id: "voice_check" }), ev("speak", { script_id: "cardiac_main", target: "aed" })];

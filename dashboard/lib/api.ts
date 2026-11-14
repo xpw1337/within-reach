@@ -145,7 +145,7 @@ export const api = {
   resolveIncident: (id: string, by: string) =>
     request<{ status: "resolved" }>("POST", `/incidents/${enc(id)}/resolve`, { by }),
   acceptDispatch: (id: string) =>
-    request<{ role: "patient" | "aed_runner"; status: string } | { status: "released" }>(
+    request<{ role: "patient" | "aed_runner" | "staff"; status: "accepted" } | { status: "released" }>(
       "POST",
       `/dispatches/${enc(id)}/accept`,
     ),
@@ -162,7 +162,7 @@ export const api = {
     request<{ incident_id: string }>("POST", `/simulate/${kind}`, camera_id ? { camera_id } : {}),
   reset: () => request<{ ok: true }>("POST", "/reset", undefined, { timeoutMs: 20000 }),
   health: () =>
-    request<{ ok: boolean; warmed: { llm: boolean; tts: boolean; db: boolean } }>("GET", "/health", undefined, {
+    request<{ ok: boolean; warmed: { llm: boolean; tts: boolean; db: boolean }; metrics?: Record<string, unknown> }>("GET", "/health", undefined, {
       timeoutMs: 4000,
     }),
 };
