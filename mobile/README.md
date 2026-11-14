@@ -85,3 +85,14 @@ incident row to point at (run `POST /simulate/cardiac` on the agent, or insert o
    gets `decline`.
 9. Missed while away: background the app, insert a dispatch, reopen within 20 s: the alert opens.
 10. One at a time: insert two dispatches quickly: only the first one alerts.
+
+### 4. CPR guide (5.8)
+
+1. Home, "CPR guide", "Start metronome": a tick plus a vibration on every beat, with the circle pulsing.
+2. Count ticks for 60 seconds with a stopwatch: expect 110.
+3. iPhone silent switch on silent: the tick must still be audible (`playsInSilentMode`). Also check
+   that haptics are felt; iOS turns haptics off in Low Power Mode.
+4. During a phone call on speaker (simulating 911 on speaker), start the metronome: the call must not
+   be cut off or muted, and note whether the tick is audible over it.
+5. After "I'm here" / "AED here" on an alert, the guide opens with the metronome already running. If
+   the incident has the `breathing` or `seizure` modifier, the matching spec line is shown.

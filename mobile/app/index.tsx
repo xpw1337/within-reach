@@ -103,6 +103,7 @@ export default function Home() {
         </Body>
       </Card>
 
+      <Button title="CPR guide" kind="secondary" onPress={() => router.push('/cpr')} />
       <Button title="Edit profile" kind="secondary" onPress={() => router.push('/onboarding')} />
       <Body muted>{PRIVACY_LINE}</Body>
     </Screen>

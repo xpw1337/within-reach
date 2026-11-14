@@ -111,6 +111,7 @@ export default function AlertScreen() {
     try {
       const res = await arrivedDispatch(d.id, d.role === 'aed_runner');
       patchDispatch(d.id, { status: res.status ?? 'arrived' });
+      router.replace({ pathname: '/cpr', params: { incidentId: d.incident_id ?? '', live: '1' } });
     } catch (error) {
       setActionError(errorMessage(error));
     } finally {
@@ -223,6 +224,11 @@ export default function AlertScreen() {
       {d.status === 'arrived' ? (
         <>
           <Notice tone="info">You are marked as arrived.</Notice>
+          <Button
+            title="CPR guide"
+            big
+            onPress={() => router.push({ pathname: '/cpr', params: { incidentId: d.incident_id ?? '', live: '1' } })}
+          />
           <Button
             title="Done"
             kind="secondary"

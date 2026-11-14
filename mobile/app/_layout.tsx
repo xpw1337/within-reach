@@ -38,6 +38,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="alert/[dispatchId]" options={{ gestureEnabled: false }} />
           <Stack.Screen name="released" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="cpr" />
         </Stack.Protected>
         <Stack.Screen name="onboarding" />
       </Stack>
