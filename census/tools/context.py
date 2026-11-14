@@ -80,10 +80,9 @@ class _SharedDB:
 
 
 def _build_default() -> ToolContext:
+    from shared import thresholds
     from shared.config import get_settings
     from shared.events import emit_agent_event
-
-    from shared import thresholds
 
     settings = get_settings()
 

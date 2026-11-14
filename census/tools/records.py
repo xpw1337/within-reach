@@ -41,7 +41,8 @@ def get_costar_profile(building_id: str) -> dict:
     return profile
 
 
-def _estimate(row: dict) -> dict:
+def occupancy_estimate(row: dict) -> dict:
+    """occupancy_est, priority_score and the basis sentence for one buildings row."""
     est = core_estimate(row.get("property_type"), row.get("size_sqft"))
     people = est.people if est else None
     return {"occupancy_est": people, "priority_score": scan_priority(people),
@@ -56,7 +57,7 @@ def estimate_occupancy(building_id: str) -> dict:
         warning(AGENT, "building_missing", f"Building {building_id} does not exist.", None,
                 {"building_id": building_id})
         return {"error": "building not found", "building_id": building_id}
-    est = _estimate(row)
+    est = occupancy_estimate(row)
     db.set_building(building_id, occupancy_est=est["occupancy_est"], priority_score=est["priority_score"])
     if est["occupancy_est"] is None:
         result(AGENT, "estimate_occupancy",
@@ -76,7 +77,7 @@ def prioritize(building_ids: list[str]) -> list[str]:
     (most people first; unknown last; then by id). Emits the scan-order decision."""
     tool_call(AGENT, "prioritize", {"buildings": len(building_ids)})
     rows = db.fetch_by_ids("buildings", building_ids)
-    scored = [(row, _estimate(row)) for row in rows]
+    scored = [(row, occupancy_estimate(row)) for row in rows]
     db.upsert("buildings", [{"id": row["id"], "occupancy_est": est["occupancy_est"],
                              "priority_score": est["priority_score"]} for row, est in scored],
               on_conflict="id")
