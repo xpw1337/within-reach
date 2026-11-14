@@ -8,6 +8,14 @@ import { missingEnv } from '../lib/env';
 import { useLocationState } from '../lib/location';
 import { setOnDuty, useProfile } from '../lib/profile';
 import { errorMessage } from '../lib/supabase';
+import { isOpen, useAlertState, type RealtimeStatus } from '../lib/useDispatches';
+
+const REALTIME_LINES: Record<RealtimeStatus, string> = {
+  connected: 'Connected. Keep the app open to be alerted.',
+  connecting: 'Connecting...',
+  error: 'Connection problem. Reopen the app to retry.',
+  off: 'Not connected.',
+};
 
 function formatTime(iso: string | null): string {
   return iso ? new Date(iso).toLocaleTimeString() : '--';
@@ -16,6 +24,7 @@ function formatTime(iso: string | null): string {
 export default function Home() {
   const { profile } = useProfile();
   const location = useLocationState();
+  const alert = useAlertState();
   const [dutyError, setDutyError] = useState<string | null>(null);
   const [savingDuty, setSavingDuty] = useState(false);
   const missing = missingEnv();
@@ -58,6 +67,20 @@ export default function Home() {
           disabled={savingDuty}
         />
         {dutyError ? <Notice tone="error">Could not change duty status: {dutyError}</Notice> : null}
+      </Card>
+
+      {alert.dispatch && isOpen(alert.dispatch) ? (
+        <Button
+          title="Open the current alert"
+          big
+          onPress={() => router.push({ pathname: '/alert/[dispatchId]', params: { dispatchId: alert.dispatch!.id } })}
+        />
+      ) : null}
+
+      <Card>
+        <Label>Alerts</Label>
+        <Body>{REALTIME_LINES[alert.realtime]}</Body>
+        {alert.realtimeError ? <Body muted>{alert.realtimeError}</Body> : null}
       </Card>
 
       <Card>

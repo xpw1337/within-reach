@@ -59,3 +59,29 @@ built. Each one needs a person with a phone.
    15 to 20 seconds, never more often than every 15 seconds.
 4. Toggle Off duty: `responders.on_duty` becomes false and the location writes stop. Toggle back on.
 5. Background the app for a minute: `last_seen_at` stops advancing (foreground only, by design).
+
+### 3. Alert flow (5.7)
+
+Find your responder id: Supabase table editor, `responders`, the row with your name. You need one
+incident row to point at (run `POST /simulate/cardiac` on the agent, or insert one by hand).
+
+1. App open on Home ("Alerts: Connected"). In the SQL editor run:
+   ```sql
+   insert into dispatches (incident_id, responder_id, channel, status)
+   values ('<incident id>', '<your responder id>', 'app', 'sent');
+   ```
+2. Within about a second the phone alarms (sound plus vibration) and shows the red Alert screen with a
+   20 s countdown, the location, distance, map and "View route in 3D".
+3. Silent mode (iPhone): flip the ring/silent switch to silent and repeat step 1. The alarm must still
+   be audible. This is the check for `playsInSilentMode`.
+4. Tap Accept. With the agent running, the role appears ("Go to the person" or "You're the AED
+   runner") and the dashboard shows it. Without the agent, an error appears; to fake the role, run
+   `update dispatches set status='accepted', role='aed_runner' where id='<dispatch id>';`
+5. Tap "AED here" (or "I'm here"): the agent receives `arrived` with `with_aed`.
+6. Release: insert another dispatch, then `update dispatches set status='released' where id='<id>';`
+   The alarm stops and the Released screen shows.
+7. Countdown: insert another dispatch and do nothing. At 0 the screen closes and the alarm stops.
+8. Can't help: insert another dispatch, tap "Can't help": the alarm stops, Home shows, and the agent
+   gets `decline`.
+9. Missed while away: background the app, insert a dispatch, reopen within 20 s: the alert opens.
+10. One at a time: insert two dispatches quickly: only the first one alerts.

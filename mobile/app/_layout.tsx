@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { colors } from '../components/theme';
 import { useLocationReporter } from '../lib/location';
 import { loadProfile, useProfile } from '../lib/profile';
+import { useDispatchWatcher } from '../lib/useDispatches';
 
 export default function RootLayout() {
   const { ready, profile } = useProfile();
@@ -15,8 +16,9 @@ export default function RootLayout() {
     void loadProfile();
   }, []);
 
-  // Runs at the root so location keeps flowing on every screen while the app is open.
+  // Run at the root so location and alerts keep flowing on every screen while the app is open.
   useLocationReporter(profile?.id ?? null, Boolean(profile?.on_duty && profile?.consent_location));
+  useDispatchWatcher(profile?.id ?? null);
 
   if (!ready) {
     return (
@@ -34,6 +36,8 @@ export default function RootLayout() {
         {/* Without a saved profile, protected screens fall through to onboarding. */}
         <Stack.Protected guard={hasProfile}>
           <Stack.Screen name="index" />
+          <Stack.Screen name="alert/[dispatchId]" options={{ gestureEnabled: false }} />
+          <Stack.Screen name="released" options={{ gestureEnabled: false }} />
         </Stack.Protected>
         <Stack.Screen name="onboarding" />
       </Stack>
