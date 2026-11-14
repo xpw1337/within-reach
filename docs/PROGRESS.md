@@ -57,11 +57,14 @@ Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec 
 
 ## Before going on stage
 
+- Which phone rings: staff are never called (they get the ungated staff alert, and nobody gets two alerts), so the ringing responder phone must be a non-staff callable responder (teammate B, public). The first accept becomes the patient responder and the second the AED runner, so the "You're the AED runner" moment needs two real phones that accept in that order.
+- Move `DISPATCH_SIM_NUMBER` to a different teammate's phone than the responder phone, or the briefing call lands as call waiting.
+
 - Seeded responders go stale 10 minutes after `last_seen_at`: refresh them (re-run the seed) right before the demo.
 
 ## Waiting on a person
 
-- Photon is set up for solo testing (values only in the untracked `.env` and `supabase/seed.local.sql`): a voice-enabled number with the default SIP Voice profile and MD5 outbound; the team lead's phone is on the shared iMessage line and plays teammate A, the caller of record and the sim-911 dispatcher. Still needed: that phone texts its assigned shared line once (opt-in is pending), a Twilio account (it runs the calls), and the webhook destination once the tunnel exists. Swap the dispatcher to a teammate's phone before the real demo.
+- Photon is set up for solo testing (values only in the untracked `.env` and `supabase/seed.local.sql`): a voice-enabled number with the default SIP Voice profile and MD5 outbound; the team lead's phone is on the shared iMessage line and plays teammate B (public, callable: it gets the responder call), the caller of record and the sim-911 dispatcher. Still needed: that phone texts its assigned shared line once (opt-in is pending), a Twilio account (it runs the calls), and the webhook destination once the tunnel exists. Swap the dispatcher to a teammate's phone before the real demo.
 
 - Bedrock model access for Sonnet 5.5 and Haiku 5.5 (access-controlled), or an Anthropic API key.
 - Someone to check the occupancy factors against the ICC text of IBC 2021 Table 1004.5.
