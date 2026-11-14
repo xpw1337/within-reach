@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Panel } from "@/components/ui";
-import { readPoint, readVexcel, type GeoPoint } from "@/lib/contracts";
+import { readEmsDoor, readVexcel, type GeoPoint } from "@/lib/contracts";
 import type { Building } from "@/lib/rows";
 import type { MapPoint } from "@/components/map/MiniMap";
 
@@ -40,7 +40,7 @@ function List({ title, items, color }: { title: string; items: GeoPoint[]; color
 /** Vexcel outside data and the EMS door chosen by the Outside subagent (spec section 9.7). */
 export function OutsidePanel({ building }: { building: Building | null }) {
   const v = readVexcel(building?.vexcel ?? null);
-  const door = readPoint(building?.ems_door ?? null);
+  const door = readEmsDoor(building?.ems_door ?? null);
   const points: MapPoint[] = [
     ...toPoints(v.entrances, COLORS.entrance, "Entrance"),
     ...toPoints(v.ambulanceParking, COLORS.parking, "Ambulance parking"),
@@ -59,6 +59,18 @@ export function OutsidePanel({ building }: { building: Building | null }) {
             <div className="label text-accent">EMS door</div>
             <div className="mt-1 text-base font-semibold">{door?.desc ?? "--"}</div>
             {door?.reason && <div className="mt-1 text-sm text-muted">{door.reason}</div>}
+            {(door?.staging || door?.hydrant) && (
+              <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="label">Staging</span>
+                  <div>{door?.staging ?? "--"}</div>
+                </div>
+                <div>
+                  <span className="label">Nearest hydrant</span>
+                  <div>{door?.hydrant ?? "--"}</div>
+                </div>
+              </div>
+            )}
           </div>
           {v.imageUrl && (
             // Vexcel imagery, stored only if the license allows (CONTRACTS section 5).

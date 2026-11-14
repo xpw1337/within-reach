@@ -25,21 +25,21 @@ export function AgentConsole() {
   const [collapsed, setCollapsed] = useStoredFlag("wr.console.collapsed", false);
   const [decisionsOnly, setDecisionsOnly] = useState(false);
 
+  // The latest run's events plus events with no run (POST /census/buildings/{id}/fix
+  // writes run_id NULL). Realtime filters cannot express "is null", so the
+  // stream is unfiltered and checked client-side.
   const events = useRealtimeTable<AgentEvent>({
-    key: "console",
+    key: `console:${runId ?? "none"}`,
     table: "agent_events",
-    filter: runId ? `run_id=eq.${runId}` : undefined,
-    enabled: Boolean(runId),
     load: async (db) => {
-      const { data, error } = await db
-        .from("agent_events")
-        .select("*")
-        .eq("run_id", runId as string)
+      const q = db.from("agent_events").select("*");
+      const { data, error } = await (runId ? q.or(`run_id.eq.${runId},run_id.is.null`) : q.is("run_id", null))
         .order("id", { ascending: false })
         .limit(100);
       if (error) throw new Error(error.message);
       return data ?? [];
     },
+    accept: (e) => e.run_id === null || e.run_id === runId,
     rowKey: (e) => String(e.id),
     sort: byIdDesc,
     max: 400,
@@ -57,7 +57,7 @@ export function AgentConsole() {
 
   const shown = decisionsOnly ? stream.filter((e) => e.kind === "decision") : stream;
   const newest = stream[0];
-  const liveTone = events.status === "live" ? "ok" : events.status === "error" ? "down" : runId ? "warn" : "idle";
+  const liveTone = events.status === "live" ? "ok" : events.status === "error" ? "down" : "warn";
 
   if (collapsed) {
     return (
@@ -98,7 +98,7 @@ export function AgentConsole() {
         </button>
       </header>
 
-      {runId && (
+      {(runId || stream.length > 0) && (
         <div className="flex items-center gap-3 border-b border-line px-4 py-1.5 text-xs text-muted">
           <span>
             <span className="num text-text">{int(stream.length)}</span> events
@@ -121,9 +121,9 @@ export function AgentConsole() {
       <TodoList todos={todos} />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {events.status === "unconfigured" || (!runId && runsStatus === "unconfigured") ? (
+        {events.status === "unconfigured" || runsStatus === "unconfigured" ? (
           <Empty>{copy.supabaseMissing}</Empty>
-        ) : !runId ? (
+        ) : !runId && events.loaded && stream.length === 0 && todos.length === 0 ? (
           <Empty>{runsLoaded ? copy.noRun : "Connecting"}</Empty>
         ) : events.status === "error" ? (
           <Empty>Could not load agent events: {events.error}</Empty>

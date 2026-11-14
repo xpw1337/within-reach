@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { useAppStatus } from "@/components/shell/AppStatus";
 import { Badge, Button, cx, EmptyState, Panel, Segmented, Stat } from "@/components/ui";
 import { api, type City } from "@/lib/api";
+import { readRunNotes } from "@/lib/contracts";
 import { assetName, assetTitle, copy, EMPTY } from "@/lib/copy";
 import { dateTime, int, pct, usd } from "@/lib/format";
 import { useRealtimeTable } from "@/lib/hooks/useRealtimeTable";
@@ -221,7 +222,12 @@ export function CityView() {
                 <Stat label="Panoramas" value={int(run.panos_done)} size="sm" />
                 <Stat label="Spent (estimate)" value={usd(run.est_cost_usd)} size="sm" />
               </div>
-              {run.notes && <p className="text-xs text-muted">{run.notes}</p>}
+              {readRunNotes(run.notes).budgetUsd !== null && (
+                <p className="text-xs text-muted">
+                  Budget <span className="num text-text">{usd(readRunNotes(run.notes).budgetUsd)}</span>
+                </p>
+              )}
+              {readRunNotes(run.notes).text && <p className="text-xs text-muted">{readRunNotes(run.notes).text}</p>}
               {stopMsg && <p className="text-xs text-muted">{stopMsg}</p>}
             </div>
           )}

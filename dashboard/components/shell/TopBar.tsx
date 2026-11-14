@@ -91,7 +91,7 @@ export function TopBar() {
       </Suspense>
       <div className="ml-auto flex items-center gap-4 text-xs text-muted">
         {latestRun && (
-          <span className="hidden items-center gap-2 xl:flex" title={latestRun.notes ?? undefined}>
+          <span className="hidden items-center gap-2 xl:flex">
             <span className="label">Run</span>
             <span className={cx("font-semibold", latestRun.status === "running" ? "text-accent" : "text-text")}>
               {latestRun.status ?? "--"}

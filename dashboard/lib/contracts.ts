@@ -98,6 +98,32 @@ export function readTimerStarted(payload: Json | null) {
   return { timer: asStr(o?.timer), firesAt: asStr(o?.fires_at) };
 }
 
+/** buildings.ems_door: {lat, lng, desc, reason, method, staging, hydrant}. */
+export function readEmsDoor(v: Json | null | undefined) {
+  const o = asObj(v);
+  const door = readPoint(v);
+  if (!o || !door) return null;
+  const describe = (x: Json | undefined): string | null => {
+    if (typeof x === "string") return x;
+    const p = readPoint(x ?? null);
+    if (!p) return null;
+    return p.desc ?? (p.lat !== null && p.lng !== null ? `${p.lat.toFixed(5)}, ${p.lng.toFixed(5)}` : null);
+  };
+  return { ...door, method: asStr(o.method), staging: describe(o.staging), hydrant: describe(o.hydrant) };
+}
+
+/** runs.notes holds JSON (budget and run options) or plain text. */
+export function readRunNotes(notes: string | null | undefined): { budgetUsd: number | null; text: string | null } {
+  if (!notes) return { budgetUsd: null, text: null };
+  try {
+    const o = asObj(JSON.parse(notes) as Json);
+    if (o) return { budgetUsd: asNum(o.budget_usd ?? o.budget ?? null), text: asStr(o.note ?? o.notes ?? null) };
+  } catch {
+    // plain text
+  }
+  return { budgetUsd: null, text: notes };
+}
+
 export function readEmsBriefed(payload: Json | null) {
   const o = asObj(payload);
   return { briefingText: asStr(o?.briefing_text), emsDoor: readPoint(o?.ems_door ?? null) };
