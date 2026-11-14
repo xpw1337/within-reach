@@ -129,7 +129,8 @@ def _series(hz: float, amp: float, fps: float, seconds: float, noise: float = 0.
     return t, x
 
 
-@pytest.mark.parametrize("hz", [1.0, 2.0, 3.0, 4.5])
+# 1.0 Hz itself sits on the band edge, where the peak bin can land just outside the band.
+@pytest.mark.parametrize("hz", [1.25, 2.0, 3.0, 4.5])
 def test_dominant_frequency_recovers_sine(hz):
     t, x = _series(hz, amp=10.0, fps=15.0, seconds=3.0, noise=0.5)
     est = F.dominant_frequency(t, x, 1.0, 5.0)
@@ -151,7 +152,7 @@ def test_dominant_frequency_noise_is_not_rhythmic():
     rng = np.random.default_rng(2)
     t = np.arange(45) / 15.0
     est = F.dominant_frequency(t, rng.normal(0, 1.0, 45), 1.0, 5.0)
-    assert est is not None
+    assert est is not None  # noise has some in-band peak, but it is weak and not dominant
     assert est.peak_ratio < 0.5
     assert est.amplitude < 1.0
 
@@ -159,8 +160,15 @@ def test_dominant_frequency_noise_is_not_rhythmic():
 def test_dominant_frequency_slow_drift_has_little_in_band_power():
     t, x = _series(0.3, amp=20.0, fps=15.0, seconds=3.0)
     est = F.dominant_frequency(t, x, 1.0, 5.0)
-    assert est is not None
-    assert est.amplitude < 5.0
+    assert est is None or est.amplitude < 5.0
+
+
+def test_single_step_is_not_an_in_band_peak():
+    # Raising a hand once: a step, not a rhythm. Its low-frequency lobe must not be reported.
+    t = np.arange(45) / 15.0
+    x = np.where(t < 1.5, 0.0, 100.0)
+    est = F.dominant_frequency(t, x, 1.0, 5.0)
+    assert est is None or est.amplitude < 10.0 or est.peak_ratio < 0.4
 
 
 def test_dominant_frequency_never_reports_above_nyquist():
@@ -190,7 +198,7 @@ def test_limb_oscillation_any_direction_and_missing_samples():
     out = {o.limb: o for o in F.limb_oscillation(t, {"l_wrist": diagonal, "r_ankle": still}, 1.0, 5.0)}
     assert out["l_wrist"].freq_hz == pytest.approx(3.0, abs=0.25)
     assert out["l_wrist"].amplitude > 4.0
-    assert out["r_ankle"].amplitude < 1e-6
+    assert "r_ankle" not in out or out["r_ankle"].amplitude < 1e-6
 
 
 def test_limb_oscillation_skips_sparse_limbs():

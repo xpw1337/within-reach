@@ -284,8 +284,8 @@ def dominant_frequency(
 
     The samples are resampled onto a uniform grid at their mean rate, linearly detrended,
     Hann-windowed and zero-padded before the FFT. Frequencies at or above the Nyquist limit of the
-    actual frame rate are never reported. Returns ``None`` if there are too few samples or the band
-    is not observable at this frame rate.
+    actual frame rate are never reported. Returns ``None`` if there are too few samples, the band
+    is not observable at this frame rate, or no spectral peak lies inside the band.
     """
     t = np.asarray(t, dtype=float)
     x = np.asarray(x, dtype=float)
@@ -309,7 +309,14 @@ def dominant_frequency(
     band = (freqs >= min_hz) & (freqs <= max_hz) & (freqs < nyquist)
     if not np.any(band):
         return None
-    band_idx = np.flatnonzero(band)
+    # Only true spectral peaks count. Without this, a single slow movement (raising a hand) leaks
+    # into the bottom of the band and its strongest in-band bin is just the falling edge of a
+    # low-frequency lobe.
+    interior = np.zeros_like(band)
+    interior[1:-1] = (power[1:-1] >= power[:-2]) & (power[1:-1] >= power[2:]) & (power[1:-1] > 0)
+    band_idx = np.flatnonzero(band & interior)
+    if len(band_idx) == 0:
+        return None
     k = int(band_idx[np.argmax(power[band_idx])])
     f_peak = float(freqs[k])
     # Power of the peak's main lobe versus everything above DC.
