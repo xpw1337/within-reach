@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 supabase/seed.local.sql
+supabase/.temp/
 
 # python
 __pycache__/

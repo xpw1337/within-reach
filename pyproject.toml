@@ -42,6 +42,7 @@ include = ["shared*", "data*", "census*", "agent*", "vision*"]
 testpaths = ["shared", "data", "census", "agent", "vision"]
 pythonpath = ["."]
 asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [tool.ruff]
 line-length = 110
