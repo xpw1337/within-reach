@@ -49,6 +49,9 @@ built. Each one needs a person with a phone.
 4. In the Supabase table editor, `responders` has a new row with those values, `callable = false`.
 5. Kill and reopen the app: it goes straight to Home (the id is stored on the phone).
 6. Edit profile, change the role, save: the same row is updated (no second row).
+7. Seeded teammate: on a fresh install, type the phone number of a seeded callable responder (from
+   `seed.local.sql`). No new row is created; that row's name, role and consents are updated, and its
+   `callable` and stored phone stay as they were. Dispatches to that row now alarm this phone.
 
 ### 2. On duty and location (5.6)
 

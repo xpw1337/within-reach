@@ -60,17 +60,41 @@ export function isPlausiblePhone(phone: string): boolean {
   return digits.length >= 7 && digits.length <= 15;
 }
 
+/** Spellings a stored number might use: as typed, digits only, E.164, and +1 for 10-digit US numbers. */
+function phoneCandidates(phone: string): string[] {
+  const digits = phone.replace(/\D/g, '');
+  const set = new Set([phone.trim(), digits, `+${digits}`]);
+  if (digits.length === 10) set.add(`+1${digits}`);
+  return [...set].filter(Boolean);
+}
+
+/** An existing responders row with the same phone number (for example a seeded teammate), if any. */
+async function findResponderIdByPhone(phone: string): Promise<string | null> {
+  const digits = phone.replace(/\D/g, '');
+  const { data, error } = await requireSupabase().from('responders').select('id,phone').in('phone', phoneCandidates(phone)).limit(5);
+  if (error) throw error;
+  const rows = (data ?? []) as { id: string; phone: string }[];
+  const same = (p: string) => {
+    const d = p.replace(/\D/g, '');
+    return d === digits || (digits.length === 10 && d === `1${digits}`) || (d.length === 10 && digits === `1${d}`);
+  };
+  return rows.find((r) => same(r.phone))?.id ?? null;
+}
+
 /**
- * Upserts this responder's row and stores its id locally. On first run the database assigns
- * the id; later saves update the same row. `callable` is never written here: only seeded
- * teammates are callable (the agent's telephony allowlist relies on that).
+ * Saves this responder's row and stores its id locally. `callable` is never written here: only
+ * seeded teammates are callable (the agent's telephony allowlist relies on that).
+ * - Later saves update the row whose id is stored on the phone.
+ * - First save: if a row with the same phone number exists (a seeded teammate), adopt its id and
+ *   update only the profile and consent fields, keeping its stored phone spelling, so that phone
+ *   alarms and rings as one responder. Otherwise insert a new row and let the database assign the id.
  */
 export async function saveProfile(input: ProfileInput): Promise<Profile> {
   const existing = profileStore.get().profile;
   const onDuty = existing?.on_duty ?? true;
-  const row: Record<string, unknown> = {
+  const sb = requireSupabase();
+  const fields: Record<string, unknown> = {
     name: input.name.trim(),
-    phone: input.phone.trim(),
     cpr_trained: input.cpr_trained,
     role: input.role,
     building_id: input.building_id,
@@ -78,11 +102,20 @@ export async function saveProfile(input: ProfileInput): Promise<Profile> {
     consent_calls: input.consent_calls,
     on_duty: onDuty,
   };
-  if (existing?.id) row.id = existing.id;
 
-  const { data, error } = await requireSupabase().from('responders').upsert(row).select('id').single();
-  if (error) throw error;
-  const id = (data as { id: string } | null)?.id;
+  let id: string | null = null;
+  const adoptId = existing?.id ? null : await findResponderIdByPhone(input.phone);
+  if (adoptId) {
+    const { error } = await sb.from('responders').update(fields).eq('id', adoptId);
+    if (error) throw error;
+    id = adoptId;
+  } else {
+    const row: Record<string, unknown> = { ...fields, phone: input.phone.trim() };
+    if (existing?.id) row.id = existing.id;
+    const { data, error } = await sb.from('responders').upsert(row).select('id').single();
+    if (error) throw error;
+    id = (data as { id: string } | null)?.id ?? null;
+  }
   if (!id) throw new Error('The database did not return a responder id.');
 
   const profile: Profile = { ...input, name: input.name.trim(), phone: input.phone.trim(), id, on_duty: onDuty };
