@@ -5,6 +5,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { colors } from '../components/theme';
+import { useLocationReporter } from '../lib/location';
 import { loadProfile, useProfile } from '../lib/profile';
 
 export default function RootLayout() {
@@ -13,6 +14,9 @@ export default function RootLayout() {
   useEffect(() => {
     void loadProfile();
   }, []);
+
+  // Runs at the root so location keeps flowing on every screen while the app is open.
+  useLocationReporter(profile?.id ?? null, Boolean(profile?.on_duty && profile?.consent_location));
 
   if (!ready) {
     return (

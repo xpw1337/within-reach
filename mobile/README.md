@@ -49,3 +49,13 @@ built. Each one needs a person with a phone.
 4. In the Supabase table editor, `responders` has a new row with those values, `callable = false`.
 5. Kill and reopen the app: it goes straight to Home (the id is stored on the phone).
 6. Edit profile, change the role, save: the same row is updated (no second row).
+
+### 2. On duty and location (5.6)
+
+1. With location consent on, Home asks for location permission. Allow it ("While using the app").
+2. Home shows "Sharing. Last update <time>". In Supabase, the row's `last_lat`, `last_lng` and
+   `last_seen_at` are set.
+3. Leave the phone still with the app open for a minute: `last_seen_at` keeps advancing, about every
+   15 to 20 seconds, never more often than every 15 seconds.
+4. Toggle Off duty: `responders.on_duty` becomes false and the location writes stop. Toggle back on.
+5. Background the app for a minute: `last_seen_at` stops advancing (foreground only, by design).
