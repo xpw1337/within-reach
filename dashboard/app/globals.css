@@ -1,0 +1,283 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #090c11;
+  --panel: #10151c;
+  --panel-2: #151b24;
+  --raised: #1b2330;
+  --line: #243041;
+  --line-strong: #33415a;
+  --text: #e9eef5;
+  --muted: #93a0b2;
+  --faint: #5f6c7e;
+  --accent: #5cc8ff;
+  --decision: #ffb547;
+  --warn: #ff8a3d;
+  --zone-green: #2ec27e;
+  --zone-yellow: #f5c542;
+  --zone-red: #ff4d4f;
+  --zone-unknown: #5b6676;
+  --danger: #ff4d4f;
+  --ok: #2ec27e;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-panel: var(--panel);
+  --color-panel-2: var(--panel-2);
+  --color-raised: var(--raised);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-decision: var(--decision);
+  --color-warn: var(--warn);
+  --color-zone-green: var(--zone-green);
+  --color-zone-yellow: var(--zone-yellow);
+  --color-zone-red: var(--zone-red);
+  --color-zone-unknown: var(--zone-unknown);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial,
+    sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.label {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ---------- heatmap ---------- */
+
+.sweep {
+  transition:
+    fill 900ms ease,
+    r 300ms ease;
+}
+
+@keyframes drop-in {
+  0% {
+    transform: translateY(-60px) scale(1.6);
+    opacity: 0;
+  }
+  60% {
+    transform: translateY(4px) scale(0.95);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.drop-in {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: drop-in 700ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+@keyframes ripple {
+  0% {
+    opacity: 0.8;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+
+.ripple {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ripple 1600ms ease-out both;
+}
+
+@keyframes pulse-ring {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.6);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.2);
+  }
+}
+
+.pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse-ring 1400ms ease-out infinite;
+}
+
+@keyframes flash-in {
+  from {
+    background-color: color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+.flash-in {
+  animation: flash-in 1600ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep,
+  .drop-in,
+  .ripple,
+  .pulse-ring,
+  .flash-in {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- markdown documents ---------- */
+
+.doc {
+  line-height: 1.6;
+}
+.doc h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem;
+}
+.doc h2 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 1.25rem 0 0.5rem;
+}
+.doc h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin: 1rem 0 0.4rem;
+}
+.doc p,
+.doc ul,
+.doc ol,
+.doc table {
+  margin: 0 0 0.75rem;
+}
+.doc ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.doc ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.doc table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.doc th,
+.doc td {
+  border: 1px solid var(--line);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+}
+.doc code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+/* ---------- leaflet in the dark theme ---------- */
+
+.leaflet-container {
+  background: #0d1218;
+  font-family: var(--font-sans);
+}
+.map-dim .leaflet-tile-pane {
+  filter: grayscale(0.9) invert(0.92) brightness(0.9) contrast(0.95);
+}
+.leaflet-control-attribution {
+  background: rgba(9, 12, 17, 0.75) !important;
+  color: var(--muted) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--accent) !important;
+}
+.wr-dot {
+  border-radius: 9999px;
+  border: 2px solid rgba(9, 12, 17, 0.9);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.wr-cluster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #0b0f14;
+  border: 3px solid rgba(9, 12, 17, 0.85);
+}
+
+/* ---------- print: only the emergency card ---------- */
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+  body[data-print="card"] {
+    background: #fff !important;
+    color: #000 !important;
+    height: auto;
+    overflow: visible !important;
+  }
+  body[data-print="card"] * {
+    visibility: hidden;
+  }
+  body[data-print="card"] #print-card,
+  body[data-print="card"] #print-card * {
+    visibility: visible;
+    color: #000 !important;
+    background: transparent !important;
+    border-color: #999 !important;
+  }
+  body[data-print="card"] #print-card {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+  }
+}
