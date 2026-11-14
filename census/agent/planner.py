@@ -51,6 +51,14 @@ def list_candidate_buildings(city: str | None = None, types: list[str] | None = 
             for r in rows[:limit]]
 
 
+def _load_bulk() -> Any:
+    """Agent 1's census/tools/bulk.py, or None while it is not installed (tests pin this)."""
+    try:
+        return importlib.import_module("census.tools.bulk")
+    except ImportError:
+        return None
+
+
 def scan_building_bulk(building_id: str) -> dict:
     """Tile every panorama and run the first-pass detector for one building (bulk worker pool).
     Refuses when the run's budget is spent."""
@@ -58,9 +66,8 @@ def scan_building_bulk(building_id: str) -> dict:
         warning(AGENT, "budget_exhausted", "Budget used up, so no new buildings will be scanned.",
                 building_id)
         return {"refused": "budget exhausted"}
-    try:
-        bulk = importlib.import_module("census.tools.bulk")
-    except ImportError:
+    bulk = _load_bulk()
+    if bulk is None:
         warning(AGENT, "scanner_unavailable",
                 "The bulk scanner is not installed here, so this building uses the equipment already pinned.",
                 building_id)

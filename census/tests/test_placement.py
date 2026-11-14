@@ -45,13 +45,21 @@ def test_tie_on_worst_case_broken_by_red_fraction():
     assert p.after_red_frac == pytest.approx(1 / 8)
 
 
-def test_disconnected_scan_covers_the_uncovered_component_first():
+def test_disconnected_fragment_is_ignored_and_left_out_of_red_fraction():
+    # a0..a4 every 10 m with the AED at a0, plus an isolated sweep. Red above 25 s at 1 m/s.
     g = build_graph(line(5, prefix="a") + [TwinNode("iso", 0, 500.0, 0.0, 0.0)])
     p = place_one(g, ["a0"], ["a1", "a2", "a3", "a4", "iso"], limit_s=25.0, walk_speed_mps=1.0)
-    assert p.sweep_id == "iso"
-    assert p.before_worst_s == pytest.approx(40.0)  # measured part only; iso was unreachable
-    assert p.before_red_frac == pytest.approx(3 / 6)  # a3, a4, iso
-    assert p.after_red_frac == pytest.approx(2 / 6)
+    assert p.sweep_id == "a3"  # worst case 10 s; the isolated fragment is never proposed
+    assert p.before_worst_s == pytest.approx(40.0)
+    assert p.before_red_frac == pytest.approx(2 / 5)  # a3, a4 over 5 connected positions; iso left out
+    assert p.after_worst_s == pytest.approx(10.0) and p.after_red_frac == 0.0
+    assert "iso" not in p.proposed_times and p.candidates_considered == 4
+
+
+def test_from_scratch_uses_the_largest_connected_part():
+    g = build_graph(line(5, prefix="a") + line(2, prefix="b"))
+    p = place_one(g, [], ["a0", "a1", "a2", "a3", "a4", "b0", "b1"], limit_s=15.0, walk_speed_mps=0.1)
+    assert p.sweep_id == "a2" and p.before_red_frac == 1.0
 
 
 def test_no_improvement_returns_none_and_current_map():

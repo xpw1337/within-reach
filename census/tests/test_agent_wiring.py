@@ -47,7 +47,10 @@ def test_planner_streams_plan_delegations_and_results_to_the_console():
     handoffs = [e["message"] for e in events.events if e["kind"] == "decision" and e["agent"] == "planner"]
     assert any(m.startswith("Handing work to mapper") for m in handoffs)
     assert any(m.startswith("Handing work to fixer") for m in handoffs)
-    assert any(e["payload"].get("code") == "scanner_unavailable" for e in events.events)
+    # The bulk step either reports the scanner as unavailable (conftest.py pins it off) or, when a
+    # bulk module is installed and unpinned, runs or fails as a tool; the run carries on either way.
+    bulk_codes = {e["payload"].get("code") for e in events.events}
+    assert bulk_codes & {"scanner_unavailable", "tool_error"} or db.rows("buildings", id=bid)
     # The subagents' tools really ran against the database.
     assert db.rows("building_scores", building_id=bid)
     assert len(db.rows("fixes", building_id=bid)) == 1
@@ -67,3 +70,23 @@ def test_tool_errors_become_warnings_not_crashes():
     final = run_buildings(["missing"], ctx, model=ScriptedModel(messages=iter(script)))
     assert "Stopped" in final
     assert any(e["payload"].get("code") == "tool_error" for e in events.events)
+
+
+def test_bulk_scan_hook_is_used_when_present(monkeypatch):
+    from census.agent import planner
+
+    calls = []
+
+    class FakeBulk:
+        @staticmethod
+        def scan_building_bulk(building_id):
+            calls.append(building_id)
+            return {"panos": 0}
+
+    monkeypatch.setattr(planner, "_load_bulk", lambda: FakeBulk)
+    db, events = FakeSupabase(), EventSink()
+    bid = seed(db)
+    script = [call("scan_building_bulk", 1, building_id=bid), AIMessage(content="Scanned.")]
+    run_buildings([bid], make_context(db, events, run_id="r"), model=ScriptedModel(messages=iter(script)))
+    assert calls == [bid]
+    assert db.rows("buildings", id=bid)[0]["census_status"] == "scanning"

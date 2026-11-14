@@ -1,7 +1,7 @@
 """Precompute camera routes for the live path (docs/CONTRACTS.md section 4, census/DESIGN.md).
 
-For a camera, the route from its sweep to the nearest AED, exit, extinguisher and naloxone that
-exist today (proposed assets are excluded: the live path only sends people to real equipment).
+For a camera, the route from its sweep to the nearest AED, exit (door or exit sign),
+extinguisher and naloxone that exist today (proposed assets are excluded: the live path only sends people to real equipment).
 Writes ``camera_routes`` with ``audio_url = NULL``; agent/io/tts.py renders the audio.
 
 ``directions`` holds the landmark phrase only, without the distance, because the CARDIAC speaker
@@ -15,10 +15,12 @@ from census.core.directions import describe_route
 from census.core.graph import shortest_route
 from census.tools import db
 from census.tools.events import result, tool_call, warning
-from census.tools.mapper import load
+from census.tools.mapper import SOURCE_ASSET_TYPES, load
 
 AGENT = "mapper"
 TARGETS = ("aed", "exit", "extinguisher", "naloxone")
+# Asset types behind each camera route target; "exit" includes exit signs (CONTRACTS section 1).
+TARGET_TYPES = {**SOURCE_ASSET_TYPES, "naloxone": ("naloxone",)}
 
 
 def precompute_camera_routes(camera_id: str) -> None:
@@ -36,7 +38,8 @@ def precompute_camera_routes(camera_id: str) -> None:
 
     rows, missing = [], []
     for target in TARGETS:
-        assets = [a for a in loaded.assets if a.get("type") == target and a.get("sweep_id") in loaded.graph]
+        assets = [a for a in loaded.assets
+                  if a.get("type") in TARGET_TYPES[target] and a.get("sweep_id") in loaded.graph]
         route = shortest_route(loaded.graph, src, [a["sweep_id"] for a in assets])
         if route is None:
             missing.append(target)

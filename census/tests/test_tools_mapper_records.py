@@ -131,3 +131,35 @@ def test_rerank_groups_fixtures_apart(env):
     assert out["groups"] == {"fixture": 1, "Houston": 1}
     assert db.rows("building_scores", building_id=rid)[0]["rank"] == 1
     assert db.rows("building_scores", building_id=bid)[0]["rank"] == 1
+
+
+def test_exit_signs_count_as_exits_and_not_connected_positions_are_left_out():
+    data = fixture_building()
+    data["assets"] = [a for a in data["assets"] if a["type"] != "exit"]
+    data["assets"].append({"type": "exit_sign", "sweep_id": "f0s0", "floor": 0, "label": "over the main doors",
+                           "source": "manual"})
+    data["twin_nodes"].append({"sweep_id": "island", "floor": 1, "x": 500.0, "y": 4.0, "z": 0.0, "neighbors": [],
+                               "room_type": None, "label": None, "is_elevator": False, "is_stairs": False})
+    db, events = FakeSupabase(), EventSink()
+    with use_context(make_context(db, events)):
+        bid = seed(db, data)
+        mapper.map_building(bid)
+    (score,) = db.rows("building_scores", building_id=bid)
+    assert score["exit_worst_s"] is not None  # the exit sign is an exit source
+    exit_times = {r["sweep_id"]: r["time_s"] for r in db.rows("coverage", building_id=bid)
+                  if r["asset_type"] == "exit"}
+    assert exit_times["f0s0"] == 0.0 and exit_times["island"] is None
+    red = sum(1 for s, t in exit_times.items() if t is not None and t > TEST_LIMITS_S["exit"])
+    assert score["exit_red_frac"] == pytest.approx(red / 20)  # 21 sweeps, 1 not connected
+    assert any("1 position not connected in the scan was left out." in m for m in events.messages("result"))
+
+
+def test_no_exit_sign_wording():
+    data = fixture_building()
+    data["assets"] = [a for a in data["assets"] if a["type"] != "exit"]
+    db, events = FakeSupabase(), EventSink()
+    with use_context(make_context(db, events)):
+        bid = seed(db, data)
+        mapper.map_building(bid)
+    assert any(m.startswith("No exit sign visible in the scan") for m in events.messages("result"))
+    assert db.rows("building_scores", building_id=bid)[0]["exit_red_frac"] == 1.0

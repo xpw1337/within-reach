@@ -20,13 +20,23 @@ from shared.types import GAP_TYPES, BuildingScore, CoverageByType, Flags, TimeMa
 
 AGENT = "mapper"
 
-# Which asset types feed each walking-time map. The Scanner detects exit *signs*; whether a sign
-# may stand in for an exit door is an open contract question, so only 'exit' assets count here.
+# Which asset types feed each walking-time map. Exit maps count exit doors and exit signs, since
+# the Scanner finds signs, not doors (docs/CONTRACTS.md section 1). Directional signs count too,
+# so exit distances are an approximation; the wording is "exit sign visible in the scan".
 SOURCE_ASSET_TYPES: dict[str, tuple[str, ...]] = {
     "aed": ("aed",),
     "extinguisher": ("extinguisher",),
-    "exit": ("exit",),
+    "exit": ("exit", "exit_sign"),
 }
+# "No ... visible in the scan" wording per gap type.
+NOT_VISIBLE = {"aed": "No AED", "extinguisher": "No extinguisher", "exit": "No exit sign"}
+
+
+def not_connected_phrase(n: int) -> str:
+    """'3 positions not connected in the scan were left out.' or '' (CONTRACTS section 1)."""
+    if not n:
+        return ""
+    return f"{n} position{'s' if n != 1 else ''} not connected in the scan {'were' if n != 1 else 'was'} left out."
 BLOCKED_EXIT_FLAG = "blocked_exit"
 
 
@@ -130,11 +140,13 @@ def _walking_time_map(loaded: LoadedBuilding, asset_type: str) -> dict:
     stats = type_stats(times, loaded.graph.number_of_nodes(), limit)
     name = GAP_NAMES[asset_type]
     if not sources:
-        message = (f"No {name} visible in the scan, so all {stats.red_sweeps} scanned positions "
-                   f"count as red for {name} access.")
+        message = (f"{NOT_VISIBLE[asset_type]} visible in the scan, so all {stats.red_sweeps} scanned "
+                   f"positions count as red for {name} access.")
     else:
         message = (f"{name[0].upper() + name[1:]} worst case {time_phrase(asset_type, stats.worst_s)}; "
-                   f"{pct(stats.red_frac)} of scanned positions are red.")
+                   f"{pct(stats.red_frac)} of connected scanned positions are red.")
+        if stats.unreachable:
+            message += " " + not_connected_phrase(stats.unreachable)
     metrics = {"asset_type": asset_type, "sources": len(sources), "rows": rows,
                "limit_one_way_s": limit, **stats.as_dict()}
     result(AGENT, "walking_time_map", message, building_id, metrics)

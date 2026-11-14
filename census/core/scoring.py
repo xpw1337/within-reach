@@ -3,15 +3,15 @@
 Pure functions. Red limits come in as arguments (one-way seconds per gap type, from
 ``shared.thresholds.limit_seconds`` in the tools layer). All times are one-way walking seconds.
 
-Rules:
-- ``red_frac`` is the fraction of scanned positions (sweeps) in the red zone. Sweep count stands
-  in for floor area: the UI says "of scanned positions".
-- A sweep is red when its time is strictly greater than the limit, or when it cannot reach any
-  asset of that type on the scan graph (no measured route means we cannot show it is within
-  reach). A type with no asset visible in the scan is therefore 100% red with worst case None,
-  and the UI wording is "no <type> visible in the scan".
-- ``worst_s`` is the largest measured time; unreachable sweeps are counted in ``red_frac`` and in
-  ``unreachable`` instead.
+Rules (docs/CONTRACTS.md section 1):
+- ``red_frac`` is red positions divided by positions that can reach at least one asset of that
+  type on the scan graph. Sweep count stands in for floor area: the UI says "of scanned positions".
+- A position is red when its time is strictly greater than the limit. Positions with no route to
+  any asset of that type are left out of the fraction, shown as unknown, and reported as a count
+  (``unreachable``: "N positions not connected in the scan").
+- A type with no asset visible in the scan still gets ``red_frac = 1.0`` and worst case None; the
+  UI wording is "no <type> visible in the scan".
+- ``worst_s`` is the largest measured time.
 """
 
 from __future__ import annotations
@@ -22,8 +22,8 @@ from dataclasses import dataclass
 from shared.types import GAP_TYPES, BuildingScore, CoverageByType, Flags, TimeMap
 
 # PRODUCT CHOICE, not a guideline or a measured statistic: how much each gap type counts toward
-# gap_score. The spec (section 9.5) only says the AED gap is weighted highest. They sum to 1, so
-# gap_score is in [0, 1].
+# gap_score. The spec (section 9.5) only says the AED gap is weighted highest; the team lead
+# confirmed these weights on 2026-11-14. They sum to 1, so gap_score is in [0, 1].
 GAP_WEIGHTS: dict[str, float] = {"aed": 0.5, "extinguisher": 0.25, "exit": 0.25}
 
 # Tie-break order when two gaps have the same red fraction: higher weight first.
@@ -33,9 +33,9 @@ _GAP_ORDER = sorted(GAP_TYPES, key=lambda t: -GAP_WEIGHTS[t])
 @dataclass(frozen=True)
 class TypeStats:
     worst_s: float | None  # largest measured one-way time; None when nothing was measured
-    red_frac: float | None  # None only when the building has no sweeps
+    red_frac: float | None  # red / reachable positions; 1.0 with no asset visible; None with no sweeps
     red_sweeps: int
-    unreachable: int  # sweeps with no route to any asset of this type
+    unreachable: int  # positions with no route to any asset of this type (not connected in the scan)
     measured: int  # sweeps with a time
 
     def as_dict(self) -> dict:
@@ -44,21 +44,26 @@ class TypeStats:
 
 
 def type_stats(times: TimeMap, sweeps_total: int, limit_s: float) -> TypeStats:
-    """Worst case and red fraction for one equipment type over ``sweeps_total`` sweeps."""
+    """Worst case and red fraction for one equipment type in a building of ``sweeps_total`` sweeps.
+
+    ``times`` holds only the positions that reach an asset; with none (no asset visible in the
+    scan) every position counts as red."""
     measured = len(times)
     total = max(sweeps_total, measured)
-    unreachable = total - measured
+    if not times:
+        return TypeStats(worst_s=None, red_frac=1.0 if total > 0 else None, red_sweeps=total,
+                         unreachable=0, measured=0)
     over = sum(1 for t in times.values() if t > limit_s)
-    red = over + unreachable
-    worst = max(times.values()) if times else None
-    red_frac = (red / total) if total > 0 else None
-    return TypeStats(worst_s=worst, red_frac=red_frac, red_sweeps=red, unreachable=unreachable,
-                     measured=measured)
+    return TypeStats(worst_s=max(times.values()), red_frac=over / measured, red_sweeps=over,
+                     unreachable=total - measured, measured=measured)
 
 
 def red_sweeps(times: TimeMap, all_sweeps: list[str], limit_s: float) -> list[str]:
-    """The sweep ids counted as red by ``type_stats`` (over the limit or unreachable)."""
-    return [s for s in all_sweeps if s not in times or times[s] > limit_s]
+    """The sweep ids counted as red by ``type_stats``: over the limit, or every sweep when no asset
+    of the type is visible in the scan."""
+    if not times:
+        return list(all_sweeps)
+    return [s for s in all_sweeps if s in times and times[s] > limit_s]
 
 
 def worst_gap(red_fracs: Mapping[str, float | None]) -> str:

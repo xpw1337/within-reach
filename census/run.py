@@ -69,10 +69,17 @@ class RunConfig:
 # ---------------------------------------------------------------------------
 
 
-def _bulk_scan(building_id: str) -> None:
+def _load_bulk() -> Any:
+    """Agent 1's census/tools/bulk.py, or None while it is not installed (tests pin this)."""
     try:
-        bulk = importlib.import_module("census.tools.bulk")
+        return importlib.import_module("census.tools.bulk")
     except ImportError:
+        return None
+
+
+def _bulk_scan(building_id: str) -> None:
+    bulk = _load_bulk()
+    if bulk is None:
         return
     db.set_building(building_id, census_status="scanning")
     bulk.scan_building_bulk(building_id)

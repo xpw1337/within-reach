@@ -115,3 +115,16 @@ def test_core_ems_door_rules():
     assert pick_ems_door([], [], []) is None
     first = pick_ems_door([{"desc": "C"}, {"desc": "D"}], [], [])
     assert first["desc"] == "C" and first["method"] == "first_listed" and first["staging"] is None
+
+
+def test_exit_route_uses_exit_signs():
+    data = fixture_building()
+    data["assets"] = [a for a in data["assets"] if a["type"] != "exit"]
+    data["assets"].append({"type": "exit_sign", "sweep_id": "f0s3", "floor": 0, "label": "over the side door",
+                           "source": "manual"})
+    db = FakeSupabase()
+    with use_context(make_context(db, EventSink())):
+        seed(db, data)
+        routes.precompute_camera_routes("cam-lobby-1")
+    (row,) = db.rows("camera_routes", camera_id="cam-lobby-1", target="exit")
+    assert row["path"][-1] == "f0s3" and row["directions"].endswith("over the side door")

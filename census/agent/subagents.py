@@ -104,10 +104,15 @@ def build_subagents(context: ToolContext) -> list[dict]:
          "system_prompt": prompts.FIXER,
          "tools": tools("fixer", [place_one, draft_owner_letter, emergency_card, registry_list])},
     ]
-    scan = scanner_tools()
+    scan = []
+    for fn in scanner_tools():
+        try:
+            scan.append(as_tool(fn, context, agent="scanner"))
+        except Exception as exc:  # noqa: BLE001 - one odd signature must not break the planner
+            log.warning("scanner tool %s not wrapped: %s", getattr(fn, "__name__", fn), exc)
     if scan:
         specs.insert(1, {"name": "scanner",
                          "description": "Confirms equipment in panoramas, double-checks borderline "
                                         "detections from a second panorama and pins assets.",
-                         "system_prompt": prompts.SCANNER, "tools": tools("scanner", scan)})
+                         "system_prompt": prompts.SCANNER, "tools": scan})
     return specs

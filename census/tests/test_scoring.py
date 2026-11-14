@@ -64,12 +64,13 @@ def test_estimate_occupancy_returns_none_rather_than_guessing():
 
 def test_type_stats_counts_red_and_unreachable():
     times = {"a": 10.0, "b": 90.0, "c": 91.0}
-    s = type_stats(times, sweeps_total=4, limit_s=90.0)  # "d" is unreachable
+    s = type_stats(times, sweeps_total=4, limit_s=90.0)  # "d" is not connected
     assert s.worst_s == 91.0
-    assert s.red_sweeps == 2  # c over the limit (strictly greater), d unreachable
-    assert s.unreachable == 1
-    assert s.red_frac == pytest.approx(0.5)
-    assert red_sweeps(times, ["a", "b", "c", "d"], 90.0) == ["c", "d"]
+    assert s.red_sweeps == 1  # only c is over the limit (strictly greater)
+    assert s.unreachable == 1  # d is left out of the fraction and reported
+    assert s.red_frac == pytest.approx(1 / 3)  # red over reachable positions (CONTRACTS section 1)
+    assert red_sweeps(times, ["a", "b", "c", "d"], 90.0) == ["c"]
+    assert red_sweeps({}, ["a", "b"], 90.0) == ["a", "b"]
 
 
 def test_type_stats_no_asset_visible_is_all_red_with_no_worst_case():

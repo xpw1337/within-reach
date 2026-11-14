@@ -2,10 +2,13 @@
 
 For each candidate sweep, add it as a source and recompute the walking-time map; keep the
 candidate that minimizes the worst case, ties broken by the smallest red fraction, then by sweep
-id so the answer is deterministic. A sweep that cannot reach any source makes the worst case
-infinite, so in a disconnected scan the search first covers the uncovered part, then shrinks the
-red area. Red fractions use the same rule as ``census.core.scoring`` (over the limit, or
-unreachable). Pure: thresholds and walk speed are arguments.
+id so the answer is deterministic. Pure: thresholds and walk speed are arguments.
+
+Red fractions follow ``census.core.scoring`` (docs/CONTRACTS.md section 1): red positions over
+positions that reach a device; 1.0 when no device is visible. Positions not connected in the scan
+are left out. So the search works on the connected part of the scan that holds the existing
+devices (or, with none visible, the largest connected part): a proposal never lands in a small
+disconnected fragment of the scan, which is usually a scanning artifact.
 
 Cost: one single-source Dijkstra per candidate, merged with the existing map. Fine for hundreds
 of sweeps. Above ``max_candidates`` the candidates are subsampled evenly and the result says so.
@@ -47,8 +50,28 @@ def candidate_sweeps(graph: nx.Graph) -> list[str]:
 
 def _key(times: TimeMap, total: int, limit_s: float) -> tuple[float, float]:
     stats = type_stats(times, total, limit_s)
-    worst = math.inf if stats.unreachable or stats.worst_s is None else stats.worst_s
+    worst = math.inf if stats.worst_s is None else stats.worst_s
     return (worst, stats.red_frac if stats.red_frac is not None else 0.0)
+
+
+def placement_area(graph: nx.Graph, existing: list[str]) -> set[str]:
+    """Sweeps the placement is scored on: the connected parts holding an existing device, else the
+    largest connected part (ties: the part with the smallest sweep id)."""
+    sources = [s for s in existing if s in graph]
+    if sources:
+        area: set[str] = set()
+        for s in sources:
+            if s not in area:
+                area |= nx.node_connected_component(graph, s)
+        return area
+    parts = list(nx.connected_components(graph))
+    if not parts:
+        return set()
+    return set(max(parts, key=lambda p: (len(p), -_rank(min(p), graph))))
+
+
+def _rank(sweep: str, graph: nx.Graph) -> int:
+    return sorted(graph.nodes).index(sweep)
 
 
 def _subsample(items: list[str], limit: int) -> list[str]:
@@ -71,13 +94,14 @@ def place_one(
     None when no candidate improves the worst case or the red fraction, and then
     ``proposed_times`` equals the current map.
     """
-    total = graph.number_of_nodes()
+    area = placement_area(graph, existing)
+    total = len(area)
     before = walking_time_map(graph, existing, walk_speed_mps)
     before_stats = type_stats(before, total, limit_s)
     before_key = _key(before, total, limit_s)
 
     existing_set = set(existing)
-    pool = sorted({c for c in candidates if c in graph and c not in existing_set})
+    pool = sorted({c for c in candidates if c in area and c not in existing_set})
     subsampled = len(pool) > max_candidates
     if subsampled:
         pool = _subsample(pool, max_candidates)
