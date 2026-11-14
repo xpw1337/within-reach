@@ -46,6 +46,25 @@ def test_crud_helpers(fake_db):
     assert len(db.fetch_all("twin_nodes")) == 1
 
 
+def test_fetch_all_pages_past_the_row_cap(fake_db, monkeypatch):
+    calls = []
+    query_cls = type(fake_db.table("runs"))
+    real_range = query_cls.range
+
+    def spy(self, start, end, **kw):
+        calls.append((start, end))
+        return real_range(self, start, end, **kw)
+
+    monkeypatch.setattr(query_cls, "range", spy)
+    fake_db.table("agent_events").insert([{"message": f"m{i}"} for i in range(2345)]).execute()
+    rows = db.fetch_all("agent_events")
+    assert len(rows) == 2345
+    assert [r["id"] for r in rows] == list(range(1, 2346))  # ordered by primary key, no overlap
+    assert calls == [(0, 999), (1000, 1999), (2000, 2999)]
+    assert len(db.fetch_all("agent_events", limit=1500)) == 1500
+    assert len(db.fetch_all("agent_events", page_size=100, message=["m1", "m2", "m3"])) == 3
+
+
 def test_upload_returns_public_url(fake_db):
     url = db.upload("crops", "b1/d1.jpg", b"\xff\xd8jpeg", "image/jpeg")
     assert url.endswith("/storage/v1/object/public/crops/b1/d1.jpg")

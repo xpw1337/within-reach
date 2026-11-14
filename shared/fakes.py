@@ -26,26 +26,8 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-# Primary keys per table (supabase/migrations/0001_init.sql).
-PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
-    "buildings": ("id",),
-    "twin_nodes": ("building_id", "sweep_id"),
-    "panos": ("building_id", "sweep_id"),
-    "detections": ("id",),
-    "assets": ("id",),
-    "coverage": ("building_id", "sweep_id", "asset_type", "scenario"),
-    "building_scores": ("building_id",),
-    "fixes": ("id",),
-    "documents": ("id",),
-    "runs": ("id",),
-    "agent_events": ("id",),
-    "cameras": ("id",),
-    "camera_routes": ("camera_id", "target"),
-    "responders": ("id",),
-    "incidents": ("id",),
-    "incident_events": ("id",),
-    "dispatches": ("id",),
-}
+from shared.db import PRIMARY_KEYS
+
 UNIQUE: dict[str, list[tuple[str, ...]]] = {"buildings": [("costar_property_id",)]}
 UUID_ID_TABLES = {
     "buildings",
@@ -100,6 +82,7 @@ class _Query:
         self._filters: list[Callable[[dict], bool]] = []
         self._order: list[tuple[str, bool]] = []
         self._limit: int | None = None
+        self._offset = 0
         self._on_conflict: tuple[str, ...] | None = None
         self._ignore_duplicates = False
         self._columns = "*"
@@ -175,6 +158,11 @@ class _Query:
         self._limit = size
         return self
 
+    def range(self, start: int, end: int, **_: Any) -> _Query:
+        """Inclusive row range, like PostgREST offset + limit."""
+        self._offset, self._limit = start, end - start + 1
+        return self
+
     # --- run ---
     def _matches(self, row: dict) -> bool:
         return all(f(row) for f in self._filters)
@@ -192,6 +180,7 @@ class _Query:
             out = [r for r in rows if self._matches(r)]
             for column, desc in reversed(self._order):
                 out.sort(key=lambda r: (r.get(column) is None, r.get(column)), reverse=desc)
+            out = out[self._offset :]
             if self._limit is not None:
                 out = out[: self._limit]
             return _Response([self._project(r) for r in out])

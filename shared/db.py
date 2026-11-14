@@ -62,6 +62,30 @@ def _apply_filters(query: Any, filters: dict[str, Any]) -> Any:
     return query
 
 
+PAGE_SIZE = 1000  # Supabase returns at most 1,000 rows per request by default
+
+# Primary keys (supabase/migrations/0001_init.sql): the default sort, so paging is stable.
+PRIMARY_KEYS: dict[str, tuple[str, ...]] = {
+    "buildings": ("id",),
+    "twin_nodes": ("building_id", "sweep_id"),
+    "panos": ("building_id", "sweep_id"),
+    "detections": ("id",),
+    "assets": ("id",),
+    "coverage": ("building_id", "sweep_id", "asset_type", "scenario"),
+    "building_scores": ("building_id",),
+    "fixes": ("id",),
+    "documents": ("id",),
+    "runs": ("id",),
+    "agent_events": ("id",),
+    "cameras": ("id",),
+    "camera_routes": ("camera_id", "target"),
+    "responders": ("id",),
+    "incidents": ("id",),
+    "incident_events": ("id",),
+    "dispatches": ("id",),
+}
+
+
 def fetch_all(
     table: str,
     *,
@@ -69,15 +93,32 @@ def fetch_all(
     order: str | None = None,
     desc: bool = False,
     limit: int | None = None,
+    page_size: int = PAGE_SIZE,
     **filters: Any,
 ) -> list[dict[str, Any]]:
-    """Rows matching equality filters. A list or tuple value means ``in``; ``None`` means ``is null``."""
-    query = _apply_filters(get_db().table(table).select(columns), filters)
-    if order:
-        query = query.order(order, desc=desc)
-    if limit is not None:
-        query = query.limit(limit)
-    return list(query.execute().data or [])
+    """Rows matching equality filters. A list or tuple value means ``in``; ``None`` means ``is null``.
+
+    Pages with ``.range()`` past Supabase's 1,000-row response cap. Without ``order`` the rows are
+    sorted by the table's primary key so pages never overlap.
+    """
+    out: list[dict[str, Any]] = []
+    start = 0
+    while True:
+        want = page_size if limit is None else min(page_size, limit - len(out))
+        if want <= 0:
+            break
+        query = _apply_filters(get_db().table(table).select(columns), filters)
+        if order:
+            query = query.order(order, desc=desc)
+        else:
+            for col in PRIMARY_KEYS.get(table, ()):
+                query = query.order(col)
+        rows = list(query.range(start, start + want - 1).execute().data or [])
+        out.extend(rows)
+        if len(rows) < want:
+            break
+        start += len(rows)
+    return out
 
 
 def fetch_one(table: str, *, columns: str = "*", **filters: Any) -> dict[str, Any] | None:
