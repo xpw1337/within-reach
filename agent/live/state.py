@@ -153,6 +153,7 @@ class IncidentState(TypedDict, total=False):
     # actions
     milestones: Annotated[dict[str, float], merge_dict]  # cpr_started, aed_arrived, responder_arrived
     ems_briefed: bool
+    briefing_call_sid: str | None
     fall_911: FallBriefing
     police_notified: bool
     staff_alerted: bool
@@ -254,6 +255,7 @@ def initial_state(
         roles={},
         milestones={},
         ems_briefed=False,
+        briefing_call_sid=None,
         fall_911="none",
         police_notified=False,
         staff_alerted=False,
