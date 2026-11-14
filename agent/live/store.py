@@ -38,7 +38,28 @@ def dispatch_row(d: dict[str, Any]) -> dict[str, Any]:
     return row
 
 
+async def enrich_routes(store: Any, camera: dict[str, Any], routes: dict[str, dict[str, Any]]) -> None:
+    """Add ``location_label`` to the naloxone route: the label of the naloxone asset at the end of
+    the route (``path[-1]``). Used for ``{naloxone_location}`` (team lead, 2026-11-14)."""
+    route = routes.get("naloxone")
+    if not route or not camera.get("building_id"):
+        return
+    path = route.get("path") or []
+    if not path:
+        return
+    try:
+        assets = await store.get_assets(camera["building_id"], "naloxone")
+    except Exception as exc:  # noqa: BLE001 - falls back to the route directions
+        log.warning("naloxone asset lookup failed: %s", exc)
+        return
+    for asset in assets:
+        if asset.get("sweep_id") == path[-1] and asset.get("label"):
+            route["location_label"] = asset["label"]
+            return
+
+
 class LiveStore(Protocol):
+    async def get_assets(self, building_id: str, asset_type: str) -> list[dict[str, Any]]: ...
     async def get_camera(self, camera_id: str) -> dict[str, Any] | None: ...
     async def get_camera_routes(self, camera_id: str) -> dict[str, dict[str, Any]]: ...
     async def get_building(self, building_id: str) -> dict[str, Any] | None: ...
@@ -62,7 +83,9 @@ class MemoryStore:
         routes: list[dict[str, Any]] | None = None,
         buildings: list[dict[str, Any]] | None = None,
         responders: list[dict[str, Any]] | None = None,
+        assets: list[dict[str, Any]] | None = None,
     ) -> None:
+        self.assets = [dict(a) for a in assets or []]
         self.cameras = {c["id"]: dict(c) for c in cameras or []}
         self.routes: dict[tuple[str, str], dict[str, Any]] = {
             (r["camera_id"], r["target"]): dict(r) for r in routes or []
@@ -73,6 +96,9 @@ class MemoryStore:
         self.events: list[dict[str, Any]] = []
         self.dispatches: dict[str, dict[str, Any]] = {}
         self.snapshots: dict[str, bytes] = {}
+
+    async def get_assets(self, building_id, asset_type):
+        return [dict(a) for a in self.assets if a.get("building_id") == building_id and a.get("type") == asset_type]
 
     async def get_camera(self, camera_id):
         c = self.cameras.get(camera_id)
@@ -175,6 +201,9 @@ class SupabaseStore:
                 self._cameras[camera_id] = row
         c = self._cameras.get(camera_id)
         return dict(c) if c else None
+
+    async def get_assets(self, building_id, asset_type):
+        return await self._read(self.db.fetch_all, "assets", building_id=building_id, type=asset_type)
 
     async def get_camera_routes(self, camera_id):
         rows = await self._read(self.db.fetch_all, "camera_routes", camera_id=camera_id)

@@ -41,7 +41,7 @@ def supabase_configured() -> bool:
 def default_store() -> Any:
     from agent.live.store import MemoryStore, SupabaseStore
 
-    if supabase_configured():
+    if settings().supabase_url:  # the dev fixture is used only when SUPABASE_URL is unset
         return SupabaseStore()
     from agent.live.devseed import dev_rows
 

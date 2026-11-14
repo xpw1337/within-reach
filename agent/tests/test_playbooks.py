@@ -44,10 +44,13 @@ def test_script_ids_match_contract():
     assert len(pb.SCRIPT_IDS) == 10
 
 
-def test_missing_wording_is_none_not_invented():
-    for script_id in ("cardiac_aed_arrived", "unsafe_stay_back", "all_clear"):
-        assert pb.SCRIPTS[script_id] is None
-        assert pb.render(script_id, {}) is None
+def test_team_lead_approved_wording():
+    # NOT spec text: approved by the team lead on 2026-11-14
+    assert pb.SCRIPTS["unsafe_stay_back"] == (
+        "Emergency by {landmark}. The area may not be safe. Stay back, keep others away, and call 911.")
+    assert pb.SCRIPTS["cardiac_aed_arrived"] == "The AED is here. Turn it on and follow its voice."
+    assert pb.SCRIPTS["all_clear"] == "All clear. Thank you."
+    assert pb.render("unsafe_stay_back", {"landmark": "east elevators"}).startswith("Emergency by east elevators.")
 
 
 ROUTES = {"aed": {"distance_m": 13.6, "directions": "left of the elevators"}}
@@ -60,14 +63,21 @@ def test_render_cardiac_main_fills_census_values():
     assert text.endswith("get the AED, 14 meters, left of the elevators.")
 
 
-def test_render_raises_when_route_missing():
-    with pytest.raises(pb.MissingPlaceholder):
-        pb.render("cardiac_main", pb.camera_context(CAMERA, {}))
+def test_no_aed_route_drops_only_the_aed_sentence():
+    full = pb.render("cardiac_main", pb.camera_context(CAMERA, ROUTES))
+    text = pb.render("cardiac_main", pb.camera_context(CAMERA, {}))
+    assert "AED" not in text
+    assert text.endswith("push hard and fast in the center of the chest.")
+    assert full.startswith(text)
+    assert "cardiac_main" in pb.renderable_scripts(CAMERA, {})  # never skipped
 
 
 def test_overdose_only_when_naloxone_mapped():
     assert "mod_overdose" not in pb.renderable_scripts(CAMERA, ROUTES)
-    routes = {**ROUTES, "naloxone": {"distance_m": 5, "directions": "the front desk first aid box"}}
+    routes = {**ROUTES, "naloxone": {"distance_m": 5, "directions": "past the lockers"}}
+    scripts = pb.renderable_scripts(CAMERA, routes)
+    assert scripts["mod_overdose"].startswith("Naloxone is in past the lockers.")  # fallback
+    routes["naloxone"]["location_label"] = "the front desk first aid box"
     scripts = pb.renderable_scripts(CAMERA, routes)
     assert scripts["mod_overdose"].startswith("Naloxone is in the front desk first aid box.")
 

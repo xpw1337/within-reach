@@ -5,9 +5,11 @@ em-dash in the spec is replaced by a comma (a spoken pause), because the team ba
 character in code. Bold markers from the spec table are markup, not text, and are dropped.
 
 Script IDs are the stable list in docs/CONTRACTS.md section 6. Three of them have no wording in the
-spec yet (``cardiac_aed_arrived``, ``unsafe_stay_back``, ``all_clear``). Their text is ``None``
-until a human supplies it: they are never rendered, and the graph falls back as described in
-``desired_script``. Do not write medical wording here that is not in the spec.
+spec (``cardiac_aed_arrived``, ``unsafe_stay_back``, ``all_clear``): their text below is NOT spec
+text, it was approved by the team lead on 2026-11-14. Do not add other wording that is in neither.
+
+With no AED route for the camera, ``cardiac_main`` is rendered without its AED sentence and
+everything else unchanged (team lead, 2026-11-14): the CARDIAC script is never skipped.
 """
 
 from __future__ import annotations
@@ -43,8 +45,8 @@ SCRIPTS: dict[str, str | None] = {
         "Push at least 2 inches deep, 100 to 120 times a minute, let the chest come back up. "
         "When the AED arrives, turn it on and follow its voice."
     ),
-    # not in the spec: wording needed from a human
-    "cardiac_aed_arrived": None,
+    # NOT spec text: approved by the team lead on 2026-11-14
+    "cardiac_aed_arrived": "The AED is here. Turn it on and follow its voice.",
     # spec section 3, "+ breathing" row
     "mod_breathing": "If they are breathing, roll them onto their side and stay with them.",
     # spec section 3, "+ seizure" row (em-dash after "check breathing" replaced by a comma)
@@ -57,11 +59,15 @@ SCRIPTS: dict[str, str | None] = {
     "mod_overdose": "Naloxone is in {naloxone_location}. Spray one dose in a nostril.",
     # spec section 3, FALL row
     "fall_main": "Help is on the way. Try not to move. Staff have been notified.",
-    # not in the spec: wording needed from a human
-    "unsafe_stay_back": None,
-    # not in the spec: wording needed from a human
-    "all_clear": None,
+    # NOT spec text: approved by the team lead on 2026-11-14
+    "unsafe_stay_back": "Emergency by {landmark}. The area may not be safe. Stay back, keep others away, and call 911.",
+    # NOT spec text: approved by the team lead on 2026-11-14
+    "all_clear": "All clear. Thank you.",
 }
+
+# The last sentence of cardiac_main, dropped when the camera has no AED route.
+CARDIAC_AED_SENTENCE = " Someone else: get the AED, {aed_distance} meters, {aed_directions}."
+assert SCRIPTS["cardiac_main"].endswith(CARDIAC_AED_SENTENCE)
 
 # Modifier -> script, in the order they are spoken after the main CARDIAC script.
 # notify_police has no script: it only triggers the police node.
@@ -104,14 +110,15 @@ def camera_context(camera: Mapping[str, Any], routes: Mapping[str, Any]) -> dict
         "landmark": camera.get("landmark"),
         "aed_distance": format_distance_m(aed.get("distance_m")),
         "aed_directions": aed.get("directions"),
-        # docs/CONTRACTS.md section 6 fills {naloxone_location} from camera_routes; the
-        # naloxone route's directions are the only location text that table holds.
-        "naloxone_location": naloxone.get("directions"),
+        # team lead, 2026-11-14: the label of the naloxone asset at the end of the route
+        # (``location_label``, filled by store.enrich_routes), falling back to the directions.
+        "naloxone_location": naloxone.get("location_label") or naloxone.get("directions"),
     }
 
 
 def naloxone_mapped(routes: Mapping[str, Any]) -> bool:
-    return bool((routes.get("naloxone") or {}).get("directions"))
+    naloxone = routes.get("naloxone") or {}
+    return bool(naloxone.get("location_label") or naloxone.get("directions"))
 
 
 def render(script_id: str, ctx: Mapping[str, Any]) -> str | None:
@@ -122,6 +129,8 @@ def render(script_id: str, ctx: Mapping[str, Any]) -> str | None:
     template = SCRIPTS[script_id]
     if template is None:
         return None
+    if script_id == "cardiac_main" and not (ctx.get("aed_distance") and ctx.get("aed_directions")):
+        template = template[: -len(CARDIAC_AED_SENTENCE)]
     needed = [name for name in ("landmark", "aed_distance", "aed_directions", "naloxone_location")
               if "{" + name + "}" in template]
     missing = [name for name in needed if not ctx.get(name)]

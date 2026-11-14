@@ -18,6 +18,7 @@ from agent.live.config import LiveConfig
 from agent.live.graph import build_graph
 from agent.live.reducer import Transition
 from agent.live.state import initial_state
+from agent.live.store import enrich_routes
 from agent.live.timers import Clock, TimerRegistry
 
 log = logging.getLogger(__name__)
@@ -89,6 +90,7 @@ class LiveRuntime:
             if camera.get("building_id"):
                 building = await self.store.get_building(camera["building_id"]) or {}
             routes = await self.store.get_camera_routes(camera_id)
+            await enrich_routes(self.store, camera, routes)
             self._ctx_cache[camera_id] = (camera, building, routes)
         camera, building, routes = self._ctx_cache[camera_id]
         camera = dict(camera, scripts=self.speaker.available(camera_id))

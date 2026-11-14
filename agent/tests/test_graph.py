@@ -38,6 +38,12 @@ async def test_1_witnessed_cardiac_no_tap_auto_proceeds_at_10s(tmp_path):
         assert wave_dispatches(rt) == [] and not [c for c in rt.telephony.calls if c["kind"] == "briefing"]
         await rt.clock.advance(5)  # t = 10 s
         assert len(wave_dispatches(rt, 1)) == 4
+        # r0 (staff) already got the staff alert at classify: never a second alert in a wave
+        assert "r0" not in {d["responder_id"] for d in wave_dispatches(rt)}
+        sent = rt.store.events_of("dispatch_sent")
+        assert set(sent[-1]["payload"]) >= {"dispatch_id", "responder_id", "role", "wave", "channel"}
+        called = [d for d in wave_dispatches(rt, 1) if d["channel"] == "call"]
+        assert called and all(d["call_sid"] for d in called)  # first-ring latency source
         assert [c["kind"] for c in rt.telephony.calls].count("briefing") == 1
         inc = rt.store.incidents[iid]
         assert inc["confirmed_by"] == "auto" and inc["status"] == "responding"
@@ -273,3 +279,16 @@ async def test_milestones_drive_cpr_coaching(tmp_path):
         assert rt.speaker.played()[-1] == "cardiac_aed_arrived"
         inc = rt.store.incidents[iid]
         assert inc["cpr_started_at"] and inc["aed_arrived_at"]
+
+
+async def test_all_clear_on_false_alarm_and_resolve(tmp_path):
+    for kind in ("false_alarm", "resolve"):
+        async with runtime(tmp_path / kind) as rt:
+            iid = await start(rt)
+            await rt.clock.advance(6)
+            await rt.deliver(iid, {"kind": kind, "source": "desk", "by": "desk"})
+            assert rt.speaker.played()[-1] == "all_clear"
+            vc = rt.store.events_of("voice_check_result")[0]["payload"]
+            assert vc == {"responsive": False}
+            vr = rt.store.events_of("verify_result")[0]["payload"]
+            assert set(vr) >= {"is_emergency", "scene_safe", "hazards", "modifiers"}

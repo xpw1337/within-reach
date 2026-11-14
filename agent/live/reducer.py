@@ -72,6 +72,26 @@ def _event(actor: str, kind: str, payload: dict[str, Any] | None = None) -> dict
     return {"actor": actor, "kind": kind, "payload": payload or {}}
 
 
+def dispatch_payload(d: Mapping[str, Any], **changes: Any) -> dict[str, Any]:
+    """docs/CONTRACTS.md section 3: ``{dispatch_id, responder_id, role, wave, channel, call_sid?}``."""
+    row = {**d, **changes}
+    payload = {"dispatch_id": row.get("id"), "responder_id": row.get("responder_id"), "role": row.get("role"),
+               "wave": row.get("wave"), "channel": row.get("channel")}
+    if row.get("call_sid"):
+        payload["call_sid"] = row["call_sid"]
+    return payload
+
+
+def verify_payload(clean: Mapping[str, Any] | None, error: str | None = None) -> dict[str, Any]:
+    """docs/CONTRACTS.md section 3: ``{is_emergency, scene_safe, hazards[], modifiers[], error?}``."""
+    clean = clean or {}
+    payload = {"is_emergency": clean.get("is_emergency"), "scene_safe": clean.get("scene_safe"),
+               "hazards": list(clean.get("hazards") or []), "modifiers": list(clean.get("modifiers") or [])}
+    if error:
+        payload["error"] = error
+    return payload
+
+
 def _cancel(state: Mapping[str, Any], *names: str) -> tuple[dict[str, None], list[dict[str, Any]]]:
     """Timer updates and effects for cancelling the named timers that are active."""
     active = state.get("timers") or {}
@@ -100,7 +120,7 @@ def _release(
             continue
         rows.append({"id": d["id"], "status": "released"})
         events.append(
-            _event("system", "dispatch_released", {"dispatch_id": d["id"], "responder_id": d.get("responder_id")})
+            _event("system", "dispatch_released", dispatch_payload(d))
         )
         if d.get("call_sid"):
             effects.append({"type": "hangup", "call_sid": d["call_sid"], "dispatch_id": d["id"]})
@@ -186,7 +206,7 @@ def _on_responsive(state, sig) -> Transition:
     timers, effects = _cancel(state, TIMER_VOICE_CHECK)
     return Transition(
         updates={"responsive": True, "voice_check_done": True, "timers": timers},
-        events=[_event("vision", "voice_check_result", {"responsive": True, "by": "raised_hand"})],
+        events=[_event("vision", "voice_check_result", {"responsive": True})],
         effects=effects,
     )
 
@@ -217,10 +237,10 @@ def _on_verify_result(state, sig) -> Transition:
     if clean is None:
         return Transition(
             updates={"verification": {"error": "invalid output"}},
-            events=[_event("llm", "verify_result", {"error": "invalid output"})],
+            events=[_event("llm", "verify_result", verify_payload(None, "invalid output"))],
         )
     updates: dict[str, Any] = {"verification": clean}
-    events = [_event("llm", "verify_result", dict(clean))]
+    events = [_event("llm", "verify_result", verify_payload(clean))]
     effects: list[dict[str, Any]] = []
     current = list(state.get("modifiers") or [])
     added = [m for m in clean.get("modifiers", []) if m not in current]
@@ -257,7 +277,7 @@ def _on_verify_failed(state, sig) -> Transition:
     reason = str(sig.get("reason") or "failed")
     return Transition(
         updates={"verification": {"error": reason}},
-        events=[_event("llm", "verify_result", {"error": reason})],
+        events=[_event("llm", "verify_result", verify_payload(None, reason))],
     )
 
 
@@ -359,8 +379,7 @@ def _on_accept(state, sig) -> Transition:
         # A staff alert is acknowledged; it does not take a responder role.
         return Transition(
             updates={"dispatches": [{"id": d["id"], "status": "accepted", "responded_at": ts}]},
-            events=[_event(_responder_actor(d), "dispatch_accepted",
-                           {"dispatch_id": d["id"], "responder_id": d.get("responder_id"), "role": "staff"})],
+            events=[_event(_responder_actor(d), "dispatch_accepted", dispatch_payload(d))],
         )
     roles = state.get("roles") or {}
     role = None if state.get("playbook") == "unsafe" else open_role(roles)
@@ -370,8 +389,7 @@ def _on_accept(state, sig) -> Transition:
             effects.append({"type": "hangup", "call_sid": d["call_sid"], "dispatch_id": d["id"]})
         return Transition(
             updates={"dispatches": [{"id": d["id"], "status": "released", "responded_at": ts}]},
-            events=[_event("system", "dispatch_released",
-                           {"dispatch_id": d["id"], "responder_id": d.get("responder_id")})],
+            events=[_event("system", "dispatch_released", dispatch_payload(d))],
             effects=effects,
         )
     updates: dict[str, Any] = {
@@ -380,8 +398,7 @@ def _on_accept(state, sig) -> Transition:
     }
     if state.get("first_accept_at") is None:
         updates["first_accept_at"] = ts
-    events = [_event(_responder_actor(d), "dispatch_accepted",
-                     {"dispatch_id": d["id"], "responder_id": d.get("responder_id"), "role": role})]
+    events = [_event(_responder_actor(d), "dispatch_accepted", dispatch_payload(d, role=role))]
     effects: list[dict[str, Any]] = []
     after = merge_state(state, updates)
     if roles_filled(after.get("roles") or {}):
@@ -411,8 +428,7 @@ def _on_decline(state, sig) -> Transition:
         effects.append({"type": "hangup", "call_sid": d["call_sid"], "dispatch_id": d["id"]})
     return Transition(
         updates={"dispatches": [{"id": d["id"], "status": "declined", "responded_at": sig["ts"]}]},
-        events=[_event(_responder_actor(d), "dispatch_declined",
-                       {"dispatch_id": d["id"], "responder_id": d.get("responder_id")})],
+        events=[_event(_responder_actor(d), "dispatch_declined", dispatch_payload(d))],
         effects=effects,
     )
 
@@ -482,8 +498,7 @@ def _on_timeout(state, sig) -> Transition:
             for d in state.get("dispatches") or []:
                 if d.get("wave") == n and d.get("status") == "sent" and d.get("role") != "staff":
                     rows.append({"id": d["id"], "status": "timeout"})
-                    events.append(_event("system", "dispatch_timeout",
-                                         {"dispatch_id": d["id"], "responder_id": d.get("responder_id"), "wave": n}))
+                    events.append(_event("system", "dispatch_timeout", dispatch_payload(d)))
             if rows:
                 updates["dispatches"] = rows
             updates["waves_closed"] = n

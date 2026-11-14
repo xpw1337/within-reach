@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Protocol
 
 from agent.live.playbooks import renderable_scripts
+from agent.live.store import enrich_routes
 
 log = logging.getLogger(__name__)
 
@@ -102,6 +103,7 @@ async def render_camera_audio(
     if not camera:
         raise LookupError(f"unknown camera {camera_id!r}")
     routes = await store.get_camera_routes(camera_id)
+    await enrich_routes(store, camera, routes)
     texts = renderable_scripts(camera, routes)
     out_dir = Path(audio_dir) / camera_id
     out_dir.mkdir(parents=True, exist_ok=True)

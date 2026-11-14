@@ -44,5 +44,11 @@ def dev_rows(now: float) -> dict[str, list[dict[str, Any]]]:
 
     responders = [person(1, "staff", True, True), person(2, "public", False, True)]
     responders += [person(i, "public", i % 2 == 0, False) for i in range(3, 7)]
-    log.warning("using the in-memory LOCAL DEV FIXTURE (no SUPABASE_URL): routes are not measured")
+    log.warning(
+        "\n" + "!" * 78 + "\n"
+        "LOCAL DEV FIXTURE IN USE (SUPABASE_URL is unset).\n"
+        "The AED route figures (%s m, %r) are a DEV FIXTURE, NOT MEASURED.\n"
+        "Responders are fictional. Nothing here reaches the dashboard.\n" + "!" * 78,
+        FIXTURE_AED_ROUTE["distance_m"], FIXTURE_AED_ROUTE["directions"],
+    )
     return {"cameras": [camera], "routes": routes, "buildings": [building], "responders": responders}

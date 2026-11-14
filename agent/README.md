@@ -59,7 +59,7 @@ locks per incident. 60 sequential resumes on one thread took about 2.2 ms each w
 
 - Supabase store, Polly rendering and real Twilio calls: written, never run (no credentials).
 - Windows and Linux audio playback: written, only macOS `afplay` was run.
-- Wording for `cardiac_aed_arrived`, `unsafe_stay_back` and `all_clear` is not in the spec: those
-  scripts are not rendered. Without stay-back audio an unsafe scene goes quiet (it never plays the
-  CARDIAC script).
+- Wording for `cardiac_aed_arrived`, `unsafe_stay_back` and `all_clear` is not spec text: it was
+  approved by the team lead on 2026-11-14 (`live/playbooks.py`). With no AED route, `cardiac_main`
+  drops only its AED sentence.
 - A restart loses timers; open incidents from before a restart are not resumed. Use `POST /reset`.

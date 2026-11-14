@@ -10,6 +10,7 @@ from typing import Any
 from agent.live import responders as rs
 from agent.live.briefing import build_briefing
 from agent.live.persist import sync
+from agent.live.reducer import dispatch_payload
 from agent.live.state import TIMER_FALL_911, wave_timer
 from agent.live.store import iso
 
@@ -26,7 +27,8 @@ def make(rt) -> dict[str, Any]:
         n = int(state.get("waves_sent") or 0) + 1
         everyone = await rt.store.list_responders()
         by_id = {r["id"]: r for r in everyone}
-        already = [d["responder_id"] for d in state.get("dispatches") or [] if d.get("role") != "staff"]
+        # Nobody gets two alerts: anyone already dispatched, staff alert included, is skipped.
+        already = [d["responder_id"] for d in state.get("dispatches") or []]
         wave = rs.next_wave(everyone, state.get("building") or {}, now, cardiac=state.get("type") == "cardiac",
                             wave_size=cfg["wave_size"], seen_window_s=cfg["responder_seen_seconds"],
                             already_sent=already)
@@ -49,9 +51,8 @@ def make(rt) -> dict[str, Any]:
 
         await asyncio.gather(*(call(r) for r in rows if r["channel"] == "call"))
         token, fires_at = rt.timers.start(incident_id, wave_timer(n), cfg["accept_timeout_seconds"])
-        events = [{"actor": "system", "kind": "dispatch_sent", "payload": {
-            "dispatch_id": r["id"], "responder_id": r["responder_id"], "wave": n, "channel": r["channel"],
-            "call_placed": bool(r["call_sid"])}} for r in rows]
+        # dispatches.call_sid is set on the row when a call was placed (first-ring latency source)
+        events = [{"actor": "system", "kind": "dispatch_sent", "payload": dispatch_payload(r)} for r in rows]
         events.append({"actor": "system", "kind": "timer_started",
                        "payload": {"timer": wave_timer(n), "fires_at": iso(fires_at)}})
         updates = {"dispatches": rows, "waves_sent": n, "timers": {wave_timer(n): token}}
@@ -101,8 +102,10 @@ def make(rt) -> dict[str, Any]:
         updates: dict[str, Any] = {"staff_alerted": True}
         if rows:
             updates["dispatches"] = rows
-        await sync(rt.store, state, updates, [{"actor": "system", "kind": "staff_alerted", "payload": {
-            "responder_ids": [r["id"] for r in targets]}}])
+        events = [{"actor": "system", "kind": "dispatch_sent", "payload": dispatch_payload(r)} for r in rows]
+        events.append({"actor": "system", "kind": "staff_alerted",
+                       "payload": {"responder_ids": [r["id"] for r in targets]}})
+        await sync(rt.store, state, updates, events)
         return updates
 
     async def fall_timer(state: dict) -> dict:

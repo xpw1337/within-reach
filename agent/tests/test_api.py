@@ -142,8 +142,8 @@ async def test_render_camera_audio_with_fakes(tmp_path):
 
     tts = FakeTTS()
     paths = await render_camera_audio("cam-test", store=store, tts=tts, audio_dir=tmp_path, upload=upload)
-    assert set(paths) == {"voice_check", "cardiac_main", "cardiac_cpr_coach", "mod_breathing", "mod_seizure",
-                          "fall_main"}
+    assert set(paths) == {"voice_check", "cardiac_main", "cardiac_cpr_coach", "cardiac_aed_arrived",
+                          "mod_breathing", "mod_seizure", "fall_main", "unsafe_stay_back", "all_clear"}
     assert ("audio", "cam-test/voice_check.mp3") in uploads
     assert store.routes[("cam-test", "aed")]["audio_url"].endswith("cam-test/cardiac_main.mp3")
     assert (tmp_path / "cam-test" / "voice_check.mp3").exists()
@@ -183,3 +183,16 @@ async def test_verify_hard_timeout_when_llm_hangs():
     with pytest.raises(VerifyError, match="timed out"):
         await v.verify(b"jpeg")
     assert _time.perf_counter() - t0 < 1.0
+
+
+async def test_naloxone_location_from_asset_label():
+    from agent.live.store import MemoryStore, enrich_routes
+
+    store = MemoryStore(assets=[{"building_id": "b-test", "type": "naloxone", "sweep_id": "s9",
+                                 "label": "the front desk first aid box"}])
+    routes = {"naloxone": {"path": ["s1", "s9"], "directions": "past the lockers", "distance_m": 9}}
+    await enrich_routes(store, CAMERA, routes)
+    assert routes["naloxone"]["location_label"] == "the front desk first aid box"
+    routes = {"naloxone": {"path": ["s1", "s4"], "directions": "past the lockers", "distance_m": 9}}
+    await enrich_routes(store, CAMERA, routes)
+    assert "location_label" not in routes["naloxone"]
