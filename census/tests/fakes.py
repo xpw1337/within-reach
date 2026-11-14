@@ -248,9 +248,18 @@ TEST_LIMITS_S = {"aed": 180 / 2, "extinguisher": 22.9 / TEST_WALK_SPEED, "exit":
 
 def make_context(db: FakeSupabase | None = None, events: EventSink | None = None,
                  llm: FakeLLM | None = None, run_id: str | None = None, adapter=None) -> ToolContext:
+    db = db if db is not None else FakeSupabase()
+    sink = events if events is not None else EventSink()
+
+    def emit(run_id, agent, kind, message, building_id=None, payload=None):
+        # Like shared.events.emit_agent_event: one agent_events row per event.
+        sink(run_id, agent, kind, message, building_id=building_id, payload=payload)
+        db.table("agent_events").insert({"run_id": run_id, "agent": agent, "kind": kind, "message": message,
+                                         "building_id": building_id, "payload": payload or {}}).execute()
+
     return ToolContext(
-        db=db if db is not None else FakeSupabase(),
-        emit=events if events is not None else EventSink(),
+        db=db,
+        emit=emit,
         limit_seconds=lambda t: TEST_LIMITS_S[t],
         display_seconds=lambda t, s: None if s is None else (2 * s if t == "aed" else s),
         walk_speed_mps=TEST_WALK_SPEED,
