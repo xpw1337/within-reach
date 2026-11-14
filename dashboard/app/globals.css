@@ -280,5 +280,8 @@ body {
     position: absolute;
     inset: 0 auto auto 0;
     width: 100%;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
   }
 }
