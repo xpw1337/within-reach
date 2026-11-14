@@ -12,6 +12,9 @@ import json
 import numpy as np
 import pytest
 
+pytest.importorskip("cv2", reason="needs the vision extra: uv sync --extra vision")
+pytest.importorskip("ultralytics", reason="needs the vision extra: uv sync --extra vision")
+
 from vision import replay
 from vision.config import DetectorConfig
 from vision.detector import PERSON_DOWN, RESPONSIVE, Detector, VisionEvent

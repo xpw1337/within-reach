@@ -17,6 +17,8 @@ import httpx
 import numpy as np
 import pytest
 
+pytest.importorskip("cv2", reason="needs the vision extra: uv sync --extra vision")
+
 from vision import client as C
 from vision import main as M
 from vision.config import DetectorConfig, load_settings
