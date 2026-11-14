@@ -20,6 +20,7 @@ Updated by the coordinator as lanes report. The source of truth for what is done
 | 2026-11-14 | Exit maps count `exit_sign` assets as exits (labeled approximation). red_frac excludes positions with no route. gap_score weights AED 0.5, extinguisher 0.25, exit 0.25 kept. |
 | 2026-11-14 | Live: wording approved for unsafe_stay_back, cardiac_aed_arrived, all_clear; no-AED cardiac drops the AED sentence; naloxone location from the asset label; staff alerts ungated; late unsafe releases dispatches. |
 | 2026-11-14 | Photon 2.0: calls stay on Twilio but go through the Photon number over SIP; iMessage alerts, role follow-ups and the briefing text through Photon's REST API; migration 0005 adds dispatch_channel 'imessage'. |
+| 2026-11-14 | Photon messaging: keep staff texts with the ungated staff alert, the stand-down text on release, and the late-reply notice. Shared iMessage line (the free plan cannot buy dedicated lines); each receiving phone texts the line once before the demo. |
 | 2026-11-14 | Supabase: hosted project created. Root `.env` uses the new key format: the publishable key as `SUPABASE_ANON_KEY`, the secret key as `SUPABASE_SERVICE_ROLE_KEY` (supabase-py 2.34 accepts both). `SUPABASE_DB_URL` is the Session pooler string (the direct host is IPv6 only). |
 
 ## Subtask status
@@ -59,6 +60,9 @@ Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec 
 - Seeded responders go stale 10 minutes after `last_seen_at`: refresh them (re-run the seed) right before the demo.
 
 ## Waiting on a person
+
+- Photon voice number: buying a US SMS number through the API returned 402 ENTITLEMENT_REQUIRED on the Messaging Free plan (nothing was charged; credit still $100.00). Needs the team lead to check Photon billing (payment method or plan) or ask Photon on Discord; then the Voice profile with MD5 outbound and the four PHOTON_NUMBER / PHOTON_SIP_* values.
+- Photon iMessage: assign the shared line to each responder phone and the sim-911 phone, and have each text the line once; webhook destination at PUBLIC_BASE_URL/photon/webhook with its secret in PHOTON_WEBHOOK_SECRET (steps in agent/README.md).
 
 - Bedrock model access for Sonnet 5.5 and Haiku 5.5 (access-controlled), or an Anthropic API key.
 - Someone to check the occupancy factors against the ICC text of IBC 2021 Table 1004.5.
