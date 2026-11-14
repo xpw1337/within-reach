@@ -8,6 +8,7 @@ Everything here crosses a lane boundary. Change it only together with the lanes 
 - Timestamps are ISO 8601 UTC.
 - Coordinates in `twin_nodes` and `assets` are the scan's model space in meters. `y` is up; floor plans are drawn from `x` and `z`.
 - `coverage.time_s`: one-way walking seconds from that sweep to the nearest asset of that type. `NULL` means no asset of that type is visible in the scan, or it is unreachable on the graph.
+- Every `*_s` column is one-way walking seconds, the same unit as `coverage.time_s`: `building_scores.aed_worst_s`, `ext_worst_s`, `exit_worst_s` and `fixes.before_worst_s`, `after_worst_s` included. Anything that shows an AED time to a person (UI, documents, speaker) converts to round trip (2x) through the thresholds helper (`shared/thresholds.py`, `dashboard/lib/thresholds.ts`), never inline.
 - HTTP errors: `{"detail": "<message>"}` with a 4xx or 5xx status.
 - All HTTP bodies are JSON except Twilio webhooks (form-encoded in, TwiML XML out).
 
@@ -144,6 +145,9 @@ def stop_run(run_id: str) -> None
 
 # census/tools/routes.py
 def precompute_camera_routes(camera_id: str) -> None    # writes camera_routes (audio_url NULL; agent/io/tts.py fills it)
+
+# census/tools/fixer.py
+def propose_fix(building_id: str, asset_type: str = "aed") -> str   # "aed" | "extinguisher"; returns the fixes.id
 ```
 
 `agent/` calls only `census.run.*`, `census.tools.fixer.propose_fix`, and `census.tools.routes.precompute_camera_routes`. It never reaches into `census/core` directly.
