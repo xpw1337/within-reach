@@ -29,6 +29,8 @@ const agentUrl = (process.env.NEXT_PUBLIC_AGENT_URL ?? "").replace(/\/+$/, "");
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
+  // Do not let `next dev` write AGENTS.md into the repo.
+  agentRules: false,
   turbopack: {
     rules: {
       "*.css": {
