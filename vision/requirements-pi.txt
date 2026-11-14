@@ -1,0 +1,7 @@
+# Minimal dependency set for running vision/ on a Raspberry Pi (stretch goal, not yet tested on a Pi).
+# Install: python -m pip install -r vision/requirements-pi.txt
+# Versions are the ones vision/ was checked against on a laptop.
+ultralytics>=8.4.213      # pulls numpy, torch and opencv-python
+lap>=0.5.12               # required by the ByteTrack tracker (bytetrack.yaml)
+httpx>=0.28
+python-dotenv             # optional: reads the repo .env
