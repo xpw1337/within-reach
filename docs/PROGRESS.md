@@ -19,7 +19,7 @@ Updated by the coordinator as lanes report. The source of truth for what is done
 | 2026-11-14 | Speaker scripts: spec section 3 wording verbatim, with each em-dash replaced by a comma. |
 | 2026-11-14 | Exit maps count `exit_sign` assets as exits (labeled approximation). red_frac excludes positions with no route. gap_score weights AED 0.5, extinguisher 0.25, exit 0.25 kept. |
 | 2026-11-14 | Live: wording approved for unsafe_stay_back, cardiac_aed_arrived, all_clear; no-AED cardiac drops the AED sentence; naloxone location from the asset label; staff alerts ungated; late unsafe releases dispatches. |
-| 2026-11-14 | Supabase: the team lead is creating a hosted project; keys go in the untracked root `.env`, plus `SUPABASE_DB_URL` for applying migrations. |
+| 2026-11-14 | Supabase: hosted project created. Root `.env` uses the new key format: the publishable key as `SUPABASE_ANON_KEY`, the secret key as `SUPABASE_SERVICE_ROLE_KEY` (supabase-py 2.34 accepts both). `SUPABASE_DB_URL` is the Session pooler string (the direct host is IPv6 only). |
 
 ## Subtask status
 
@@ -41,6 +41,13 @@ Legend: done = pushed and verified offline; partial = pushed, more to do; -- = n
 | 5.4 | code done | 0ec1961. Six clips need humans |
 | 5.5 to 5.8 | done offline | 3a741e9 to 6285bf1, 2d27b2f (adopt seeded responder by phone). Device steps in mobile/README.md |
 
+Hosted Supabase, 2026-11-14:
+- Migrations 0001 to 0004 applied: 17 tables, Realtime on the 7 spec tables, 4 buckets.
+- `data.load --fallback` run twice: 1 building, 33 sweeps, 6 assets, 1 camera, no duplicates (1.3 verified).
+- seed.sql: 8 fictional responders.
+- Realtime: an agent_events insert arrived in 0.32 s on a subscription made with the anon (publishable) key (1.2 verified).
+- `census.cli rerun --mode pipeline` on the fallback building: 198 coverage rows (current and proposed), 1 score, 2 fixes, 2 proposed assets, 3 documents (owner letter used the template: no model keys), 3 camera routes, 35 console events.
+
 Full Python suite on main: 339 passed, 2 skipped without the vision extra (2026-11-14).
 
 Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec section 3 template adds it).
@@ -51,7 +58,6 @@ Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec 
 
 ## Waiting on a person
 
-- Hosted Supabase project keys in `.env` (team lead, in progress), then apply migrations 0001 to 0004.
 - Bedrock model access for Sonnet 5.5 and Haiku 5.5 (access-controlled), or an Anthropic API key.
 - Someone to check the occupancy factors against the ICC text of IBC 2021 Table 1004.5.
 - Anthropic API key or AWS Bedrock credentials (AWS also covers Polly).
