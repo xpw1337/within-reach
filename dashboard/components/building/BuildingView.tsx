@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useAppStatus } from "@/components/shell/AppStatus";
@@ -15,8 +16,11 @@ import { CostarFacts, FlagsList, ScoreSummary } from "./BuildingFacts";
 import { DocumentsTab } from "./DocumentsTab";
 import { FixSummary } from "./FixSummary";
 import { FloorHeatmap } from "./FloorHeatmap";
+import { matterportAvailable } from "./MatterportTwin";
 import { OutsidePanel } from "./OutsidePanel";
 import { ZoneLegend } from "./ZoneLegend";
+
+const MatterportTwin = dynamic(() => import("./MatterportTwin").then((m) => m.MatterportTwin), { ssr: false });
 
 type Scenario = "current" | "proposed";
 type Notice = { tone: "ok" | "err"; text: string } | null;
@@ -31,6 +35,7 @@ export function BuildingView({ id }: { id: string }) {
   const [request, setRequest] = useState<GapType | null>(null);
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState<"fix" | "rerun" | null>(null);
+  const [view, setView] = useState<"2d" | "3d">("2d");
   const { health } = useAppStatus();
   const th = useThresholds();
   const t = th.thresholds;
@@ -78,6 +83,8 @@ export function BuildingView({ id }: { id: string }) {
   const mapped = data.coverage.some((c) => c.scenario === "current");
   const b = data.building;
   const apiDown = health.status === "unconfigured";
+  const has3d = matterportAvailable(b?.matterport_model_id);
+  const show3d = has3d && view === "3d";
 
   // The fast poll for a requested fix ends after FIX_WAIT_MS. If nothing arrived
   // by then, say so: the agent may be down.
@@ -178,6 +185,17 @@ export function BuildingView({ id }: { id: string }) {
           title="Floor plan"
           right={
             <div className="flex flex-wrap items-center gap-2">
+              {has3d && (
+                <Segmented
+                  size="sm"
+                  value={view}
+                  onChange={setView}
+                  options={[
+                    { value: "2d", label: "2D plan" },
+                    { value: "3d", label: "3D twin" },
+                  ]}
+                />
+              )}
               <Segmented
                 size="sm"
                 value={type}
@@ -224,19 +242,28 @@ export function BuildingView({ id }: { id: string }) {
           ) : (
             <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_260px]">
               <div className="relative border-line p-3 lg:border-r">
-                <FloorHeatmap
-                  nodes={data.nodes}
-                  assets={data.assets}
-                  index={index}
-                  thresholds={t}
-                  bounds={bounds}
-                  floor={floor}
-                  type={type}
-                  scenario={scenario}
-                  rippleFrom={rippleFrom}
-                  hovered={hovered}
-                  onHover={setHovered}
-                />
+                {show3d ? (
+                  <MatterportTwin
+                    modelId={b?.matterport_model_id ?? null}
+                    assets={data.assets}
+                    nodes={data.nodes}
+                    showProposed={scenario === "proposed"}
+                  />
+                ) : (
+                  <FloorHeatmap
+                    nodes={data.nodes}
+                    assets={data.assets}
+                    index={index}
+                    thresholds={t}
+                    bounds={bounds}
+                    floor={floor}
+                    type={type}
+                    scenario={scenario}
+                    rippleFrom={rippleFrom}
+                    hovered={hovered}
+                    onHover={setHovered}
+                  />
+                )}
                 {fixType && (
                   <div className="absolute right-4 bottom-4 flex items-center gap-3">
                     {waitingFor && (

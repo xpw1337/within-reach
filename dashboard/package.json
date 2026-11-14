@@ -12,6 +12,7 @@
     "gen-types": "scripts/gen-types.sh"
   },
   "dependencies": {
+    "@matterport/sdk": "1.6.2",
     "@supabase/supabase-js": "2.119.0",
     "leaflet": "1.9.4",
     "leaflet.markercluster": "1.5.3",

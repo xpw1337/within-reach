@@ -1,8 +1,10 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useMemo, useState } from "react";
 import { FloorHeatmap } from "@/components/building/FloorHeatmap";
-import { EmptyState, Panel } from "@/components/ui";
+import { matterportAvailable } from "@/components/building/MatterportTwin";
+import { EmptyState, Panel, Segmented } from "@/components/ui";
 import { assetName } from "@/lib/copy";
 import { boundsOf, floorOf, indexCoverage } from "@/lib/heatmap";
 import { useBuilding } from "@/lib/hooks/useBuilding";
@@ -10,6 +12,11 @@ import { useThresholds } from "@/lib/hooks/useThresholds";
 import type { Camera, CameraRoute } from "@/lib/rows";
 
 const STEP_MS = 450;
+
+const MatterportTwin = dynamic(
+  () => import("@/components/building/MatterportTwin").then((m) => m.MatterportTwin),
+  { ssr: false },
+);
 
 /** Advances along the path once per STEP_MS; restarts when `runKey` changes (a new speak event). */
 function useStep(length: number, runKey: number | null): number {
@@ -44,6 +51,8 @@ export function RouteFlythrough({
   buildingId: string | null;
 }) {
   const data = useBuilding(buildingId ?? "");
+  const [view, setView] = useState<"2d" | "3d">("2d");
+  const has3d = matterportAvailable(data.building?.matterport_model_id);
   const th = useThresholds();
   const target = speak?.target ?? "aed";
   const route = routes.find((r) => r.camera_id === camera?.id && r.target === target) ?? null;
@@ -61,7 +70,22 @@ export function RouteFlythrough({
   return (
     <Panel
       title={`Route to the ${assetName(target)}${speak ? ", synced to the speaker" : ""}`}
-      right={<span className="text-xs text-muted">Floor {floor}</span>}
+      right={
+        <div className="flex items-center gap-3">
+          {has3d && (
+            <Segmented
+              size="sm"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: "2d", label: "Plan" },
+                { value: "3d", label: "3D twin" },
+              ]}
+            />
+          )}
+          <span className="text-xs text-muted">Floor {floor}</span>
+        </div>
+      }
       bodyClassName="p-3"
     >
       {!buildingId ? (
@@ -70,6 +94,16 @@ export function RouteFlythrough({
         <EmptyState title="--">{data.nodesLoaded ? "No scan graph for this building." : "Loading the plan"}</EmptyState>
       ) : (
         <>
+          {has3d && view === "3d" ? (
+            <MatterportTwin
+              modelId={data.building?.matterport_model_id ?? null}
+              assets={data.assets}
+              nodes={data.nodes}
+              flyPath={path}
+              flyKey={speak?.id ?? null}
+              height={520}
+            />
+          ) : (
           <FloorHeatmap
             nodes={data.nodes}
             assets={data.assets}
@@ -84,6 +118,7 @@ export function RouteFlythrough({
             routeStep={step}
             maxHeight={520}
           />
+          )}
           <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 px-1 text-sm">
             {route ? (
               <>

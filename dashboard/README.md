@@ -19,6 +19,12 @@ Browser calls to the agent go to `/agent-api/*`, which Next rewrites to
 
 With no env, no agent and empty tables every page still renders: numbers show `--`.
 
+The 3D twin (Matterport Showcase SDK) appears only when `NEXT_PUBLIC_MATTERPORT_SDK_KEY` is set
+and the building has `matterport_model_id`; otherwise, or if the SDK is blocked, the 2D plan is
+used. `@matterport/sdk` downloads its type file from api.matterport.com in `postinstall` and
+fails the install if that host is unreachable; `npm install --ignore-scripts` works then (the
+code uses its own types).
+
 ## Checks
 
 ```bash
