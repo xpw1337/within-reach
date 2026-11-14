@@ -16,7 +16,15 @@ from census.core.placement import place_one as core_place_one
 from census.tools import db
 from census.tools.context import ctx
 from census.tools.events import GAP_NAMES, decision, pct, result, time_phrase, tool_call, warning
-from census.tools.mapper import SOURCE_ASSET_TYPES, LoadedBuilding, load, source_sweeps, write_coverage
+from census.tools.mapper import (
+    SOURCE_ASSET_TYPES,
+    LoadedBuilding,
+    load,
+    not_connected_phrase,
+    source_sweeps,
+    time_maps,
+    write_coverage,
+)
 from census.tools.records import occupancy_estimate
 from shared.types import GAP_TYPES
 
@@ -70,6 +78,9 @@ def propose_fix(building_id: str, asset_type: str = "aed") -> str:
                      f"{placement.candidates_considered} candidate positions: {change}.")
         if placement.subsampled:
             rationale += " Candidates were subsampled for speed."
+        left_out = loaded.graph.number_of_nodes() - len(placement.proposed_times)
+        if left_out:
+            rationale += " " + not_connected_phrase(left_out)
     else:
         where = None
         rationale = (f"No single new {name} position improves the worst case or the red area "
@@ -120,8 +131,11 @@ def collect_facts(building_id: str) -> dict:
     fix_where = None
     if fix and fix.get("sweep_id") in loaded.graph:
         fix_where = dict(loaded.graph.nodes[fix["sweep_id"]])
+    total = loaded.graph.number_of_nodes()
+    not_connected = {g: (total - len(t)) if t else 0 for g, t in time_maps(loaded).items()}
     return core_docs.build_facts(
-        building=loaded.building, score=score, sweeps_scanned=loaded.graph.number_of_nodes(),
+        not_connected=not_connected,
+        building=loaded.building, score=score, sweeps_scanned=total,
         assets=assets, fix=fix, fix_where=fix_where, ems_door=loaded.building.get("ems_door"),
         occupancy_basis=occupancy_estimate(loaded.building)["basis"], show_s=ctx().display_seconds,
     )

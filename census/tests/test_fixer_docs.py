@@ -137,3 +137,20 @@ def test_card_and_registry_without_equipment():
 def test_fixed_limit_values_are_test_stand_ins():
     # Guard: the tool tests use the .env.example defaults through the fake context.
     assert TEST_LIMITS_S["aed"] == 90
+
+
+def test_documents_use_exit_sign_wording_and_not_connected_counts():
+    facts = core_docs.build_facts(
+        building={"name": "B", "address": "2 Road"},
+        score={"aed_worst_s": 10.0, "aed_red_frac": 0.5, "ext_worst_s": None, "ext_red_frac": 1.0,
+               "exit_worst_s": None, "exit_red_frac": 1.0, "worst_gap": "extinguisher"},
+        sweeps_scanned=12, assets={"aed": [{"label": "lobby", "floor": 0}]}, fix=None, fix_where=None,
+        ems_door=None, occupancy_basis=None, show_s=lambda t, s: s, not_connected={"aed": 3})
+    letter = core_docs.wrap_letter(facts, core_docs.owner_letter_template(facts))
+    assert "3 positions not connected in the scan were left out" in letter
+    assert "no exit sign visible in the scan" in letter and core_docs.EXIT_NOTE in letter
+    card = core_docs.emergency_card(facts)
+    assert "## Exits and exit signs" in card and "No exit sign visible in the scan" in card
+    assert core_docs.EXIT_NOTE in card
+    assert core_docs._place({"type": "exit_sign", "label": "hall"})["where"] == "exit sign, hall"
+    assert core_docs.unexpected_numbers(letter, facts) == []

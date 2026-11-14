@@ -23,8 +23,12 @@ REGISTRY_INSTRUCTIONS = ("Please confirm that every AED in the building is regis
                          "911 center and with a national AED registry, so dispatchers can send callers "
                          "to it.")
 ESTIMATE_NOTE = "People counts are estimates from a building-code occupant load table, not a head count."
+EXIT_NOTE = ("Exit locations include exit signs visible in the scan, so exit distances are an "
+             "approximation.")
 NAMES = {"aed": "AED", "extinguisher": "fire extinguisher", "exit": "exit"}
-PLURALS = {"aed": "AEDs", "extinguisher": "fire extinguishers", "exit": "exits"}
+PLURALS = {"aed": "AEDs", "extinguisher": "fire extinguishers", "exit": "exits and exit signs"}
+NOT_VISIBLE = {"aed": "no AED visible in the scan", "extinguisher": "no fire extinguisher visible in the scan",
+               "exit": "no exit sign visible in the scan"}
 
 # Numbers that fixed wording itself uses and that are therefore always allowed.
 FIXED_NUMBERS = ("911",)
@@ -135,8 +139,16 @@ def _time(asset_type: str, shown_s: float | None) -> str | None:
 
 def _place(item: dict) -> dict:
     floor = item.get("floor")
-    return {"where": item.get("label") or item.get("room_type") or "location unlabeled",
-            "level": None if floor is None else str(floor)}
+    where = item.get("label") or item.get("room_type") or "location unlabeled"
+    if item.get("type") == "exit_sign":
+        where = f"exit sign, {where}" if item.get("label") or item.get("room_type") else "exit sign"
+    return {"where": where, "level": None if floor is None else str(floor)}
+
+
+def not_connected_phrase(n: int | None) -> str | None:
+    if not n:
+        return None
+    return f"{n} position{'s' if n != 1 else ''} not connected in the scan {'were' if n != 1 else 'was'} left out"
 
 
 def build_facts(
@@ -150,12 +162,15 @@ def build_facts(
     ems_door: dict | None,
     occupancy_basis: str | None,
     show_s: Any,
+    not_connected: dict[str, int] | None = None,
 ) -> dict:
     """Display-ready facts. ``show_s(asset_type, one_way_s)`` is shared.thresholds.display_seconds,
     so AED times are round trip here and nowhere is the conversion done inline.
 
     ``score`` is a building_scores row (one-way seconds), ``assets`` maps a type to its current
     asset rows, ``fix`` is a fixes row and ``fix_where`` the proposed sweep's node data.
+    ``not_connected`` maps a gap type to the count of positions with no route to that equipment
+    (left out of the red fraction, CONTRACTS section 1).
     """
     measured: dict[str, Any] = {}
     if score:
@@ -165,6 +180,7 @@ def build_facts(
                 "visible_in_scan": len(assets.get(gap, [])),
                 "worst_case": _time(gap, show_s(gap, worst)),
                 "red_area": _pct(score.get(f"{prefix}_red_frac")),
+                "not_connected": not_connected_phrase((not_connected or {}).get(gap)),
             }
     facts: dict[str, Any] = {
         "building": {k: building.get(k) for k in ("name", "address", "city", "property_type")},
@@ -244,7 +260,7 @@ def wrap_letter(facts: dict, body_md: str) -> str:
         body_md.strip(),
         "## Registering your AEDs",
         REGISTRY_INSTRUCTIONS,
-        f"_{SCAN_DISCLAIMER} {ESTIMATE_NOTE}_",
+        f"_{SCAN_DISCLAIMER} {EXIT_NOTE} {ESTIMATE_NOTE}_",
     ]) + "\n"
 
 
@@ -257,11 +273,14 @@ def owner_letter_template(facts: dict) -> str:
         if not m:
             continue
         if not m["visible_in_scan"]:
-            lines.append(f"- {PLURALS[gap].capitalize()}: none visible in the scan, so every scanned "
+            lines.append(f"- {PLURALS[gap].capitalize()}: {NOT_VISIBLE[gap]}, so every scanned "
                          f"position counts as outside the target.")
         else:
-            lines.append(f"- {PLURALS[gap].capitalize()}: worst case {m['worst_case'] or '--'}; "
-                         f"{m['red_area'] or '--'} of scanned positions are outside the target.")
+            line = (f"- {PLURALS[gap].capitalize()}: worst case {m['worst_case'] or '--'}; "
+                    f"{m['red_area'] or '--'} of connected scanned positions are outside the target.")
+            if m.get("not_connected"):
+                line += f" ({m['not_connected']}.)"
+            lines.append(line)
     if facts.get("stairs_only"):
         lines.append("- Some upper-floor positions reach an exit only by stairs.")
     if facts.get("blocked_exits") not in (None, "0"):
@@ -283,9 +302,10 @@ def owner_letter_template(facts: dict) -> str:
 
 def emergency_card(facts: dict) -> str:
     """One printable page. Deterministic: no LLM."""
-    def items(places: list[dict], plural: str) -> list[str]:
+    def items(places: list[dict], gap: str) -> list[str]:
         if not places:
-            return [f"- No {plural} visible in the scan. Ask staff where the nearest one is."]
+            missing = NOT_VISIBLE[gap]
+            return [f"- {missing[0].upper()}{missing[1:]}. Ask staff where the nearest one is."]
         return [f"- {p['where']}{_level(p)}" for p in places]
 
     door = facts.get("ems_door") or {}
@@ -294,16 +314,16 @@ def emergency_card(facts: dict) -> str:
         f"**Address:** {_address(facts)}",
         "**In an emergency, call 911 first.**",
         "## AEDs",
-        *items(facts["aeds"], "AED"),
+        *items(facts["aeds"], "aed"),
         "## Fire extinguishers",
-        *items(facts["extinguishers"], "fire extinguisher"),
-        "## Exits",
+        *items(facts["extinguishers"], "extinguisher"),
+        "## Exits and exit signs",
         *items(facts["exits"], "exit"),
         "## For EMS",
         f"- Best ambulance entrance: {door.get('door') or '--'}",
         f"- Staging spot: {door.get('staging') or '--'}",
         f"- Nearest hydrant: {door.get('hydrant') or '--'}",
-        f"_{SCAN_DISCLAIMER}_",
+        f"_{SCAN_DISCLAIMER} {EXIT_NOTE}_",
     ]
     return "\n\n".join(out[:3]) + "\n\n" + "\n".join(out[3:]) + "\n"
 
