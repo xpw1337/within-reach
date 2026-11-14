@@ -126,6 +126,7 @@ body {
 }
 
 .ripple {
+  opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
   animation: ripple 1600ms ease-out both;
