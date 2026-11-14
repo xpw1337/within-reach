@@ -42,6 +42,8 @@ def make(rt) -> dict[str, Any]:
             "call_sid": None, "sent_at": now, "responded_at": None,
         } for r in wave]
         await rt.store.upsert_dispatches(rows)  # the app alert goes out now, before the calls connect
+        # The iMessage alert goes out alongside (background task: never waits, never delays a call).
+        texted = {r["id"] for r in rows if rt.imessage.alert(state, r, by_id[r["responder_id"]])}
 
         async def call(row: dict) -> None:
             try:
@@ -50,6 +52,9 @@ def make(rt) -> dict[str, Any]:
                 log.warning("responder call failed for dispatch %s: %s", row["id"], exc)
 
         await asyncio.gather(*(call(r) for r in rows if r["channel"] == "call"))
+        for r in rows:  # docs/CONTRACTS.md: channel is imessage only when no call was placed
+            if r["id"] in texted and not r.get("call_sid"):
+                r["channel"] = "imessage"
         token, fires_at = rt.timers.start(incident_id, wave_timer(n), cfg["accept_timeout_seconds"])
         # dispatches.call_sid is set on the row when a call was placed (first-ring latency source)
         events = [{"actor": "system", "kind": "dispatch_sent", "payload": dispatch_payload(r)} for r in rows]
@@ -79,6 +84,8 @@ def make(rt) -> dict[str, Any]:
         if error:
             payload["error"] = error
         await sync(rt.store, state, updates, [{"actor": "twilio", "kind": "ems_briefed", "payload": payload}])
+        # The same briefing as text to DISPATCH_SIM_NUMBER, after it is spoken (background).
+        rt.imessage.briefing_placed(state, text, call_placed=bool(sid))
         return updates
 
     async def police(state: dict) -> dict:
@@ -90,7 +97,8 @@ def make(rt) -> dict[str, Any]:
         return updates
 
     async def staff(state: dict) -> dict:
-        """Staff alert: app-only dispatches with role ``staff`` to on-duty staff and security of the building."""
+        """Staff alert: dispatches with role ``staff`` to on-duty staff and security of the building
+        (app alert, plus an iMessage when the staff member is ``callable`` with ``consent_calls``)."""
         now = rt.clock.now()
         everyone = await rt.store.list_responders()
         targets = rs.staff_to_alert(everyone, state.get("building") or {})
@@ -99,6 +107,9 @@ def make(rt) -> dict[str, Any]:
             "channel": "app", "role": "staff", "wave": 0, "status": "sent", "call_sid": None,
             "sent_at": now, "responded_at": None,
         } for r in targets]
+        for row, r in zip(rows, targets, strict=True):  # staff are never called: a text makes it imessage
+            if rt.imessage.alert(state, row, r, staff=True):
+                row["channel"] = "imessage"
         updates: dict[str, Any] = {"staff_alerted": True}
         if rows:
             updates["dispatches"] = rows

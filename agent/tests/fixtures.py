@@ -39,7 +39,7 @@ def default_responders(n=10):
 
 @asynccontextmanager
 async def runtime(tmp_path: Path, *, responders=None, verifier=None, speaker=None, telephony=None,
-                  routes=None, cfg=None):
+                  routes=None, cfg=None, messenger=None):
     tmp_path.mkdir(parents=True, exist_ok=True)
     clock = FakeClock(T0)
     store = MemoryStore(cameras=[CAMERA], routes=ROUTES if routes is None else routes, buildings=[BUILDING],
@@ -48,6 +48,6 @@ async def runtime(tmp_path: Path, *, responders=None, verifier=None, speaker=Non
         rt = LiveRuntime(cfg=cfg or LiveConfig(), store=store, speaker=speaker or FakeSpeaker(),
                          telephony=telephony or FakeTelephony(),
                          verifier=verifier or FakeVerifier(sleep=clock.sleep), clock=clock,
-                         checkpointer=saver)
+                         checkpointer=saver, messenger=messenger)
         yield rt
         await rt.settle()

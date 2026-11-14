@@ -16,6 +16,7 @@ from langgraph.types import Command
 
 from agent.live.config import LiveConfig
 from agent.live.graph import build_graph
+from agent.live.imessage import IMessage
 from agent.live.reducer import Transition
 from agent.live.state import initial_state
 from agent.live.store import enrich_routes
@@ -26,11 +27,12 @@ log = logging.getLogger(__name__)
 
 class LiveRuntime:
     def __init__(self, *, cfg: LiveConfig, store, speaker, telephony, verifier, clock: Clock,
-                 checkpointer) -> None:
+                 checkpointer, messenger=None) -> None:
         self.cfg = cfg
         self.store = store
         self.speaker = speaker
         self.telephony = telephony
+        self.imessage = IMessage(self, messenger)  # Photon iMessage side channel; None disables it
         self.verifier = verifier
         self.clock = clock
         self.checkpointer = checkpointer
@@ -224,6 +226,7 @@ class LiveRuntime:
         await self.speaker.stop()
         await self.store.reset()
         self.frames.clear()
+        self.imessage.reset()
         self.open_by_camera.clear()
         self.known_incidents.clear()
         self.last_transition.clear()

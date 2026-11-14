@@ -4,6 +4,7 @@ Choices made from the environment:
 - store: Supabase when ``SUPABASE_URL`` and ``SUPABASE_SERVICE_ROLE_KEY`` are set, else in-memory dev fixture
 - telephony: Twilio when its credentials and ``PUBLIC_BASE_URL`` are set, else FakeTelephony (no calls);
   through the Photon number over SIP when every ``PHOTON_SIP_*`` setting and ``PHOTON_NUMBER`` are set
+- messaging: Photon iMessage when ``PHOTON_API_KEY`` and ``PHOTON_PROJECT_ID`` are set, else none
 - TTS: Polly when ``TTS_PROVIDER=polly`` and AWS credentials exist; macOS ``say`` otherwise on a Mac
 """
 
@@ -98,6 +99,18 @@ def default_telephony() -> Any:
                                ring_timeout_s=int(s.accept_timeout_seconds), sip=sip)
     log.warning("Twilio not configured: calls are recorded by FakeTelephony, nothing rings")
     return FakeTelephony(dispatch_sim_number=s.dispatch_sim_number or "+15550001111")
+
+
+def default_messenger() -> Any:
+    """``PhotonMessenger`` when PHOTON_API_KEY and PHOTON_PROJECT_ID are set, else None (no texts)."""
+    s = settings()
+    if not (s.photon_api_key and s.photon_project_id):
+        log.info("Photon not configured: no iMessage alerts")
+        return None
+    from agent.io.messaging import PhotonMessenger
+
+    return PhotonMessenger(api_key=s.photon_api_key, project_id=s.photon_project_id,
+                           dispatch_sim_number=s.dispatch_sim_number)
 
 
 def get_runtime(request: Request) -> Any:

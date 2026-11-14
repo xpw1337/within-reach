@@ -2,7 +2,8 @@
 
 ``await_signal`` is the only node that calls ``interrupt()``. It has no side effect before the
 interrupt, so re-running it on resume is safe. The resumed signal is applied through the pure
-reducer; its effects (cancel timers, hang up calls, stop the speaker) run here, once.
+reducer; its effects (cancel timers, hang up calls, stop the speaker) run here, once, and so
+do the iMessage follow-ups (background tasks, never awaited).
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ def make(rt) -> dict[str, Any]:
             return {}
         await rt.run_effects(state, tr.effects)
         await sync(rt.store, state, tr.updates, tr.events)
+        rt.imessage.after_signal(state, tr.updates)  # role follow-up / stand-down texts (background)
         return tr.updates
 
     async def classify(state: dict) -> dict:

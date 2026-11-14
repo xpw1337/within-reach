@@ -16,6 +16,7 @@ agent/
     incidents.py       confirm, cancel_911, milestone, resolve
     dispatches.py      accept, decline, arrived
     twilio.py          voice, gather, briefing webhooks (TwiML)
+    photon.py          POST /photon/webhook: iMessage replies 1 / 2 / here (Photon 2.0)
     simulate.py        /simulate/{cardiac|fall|outdoor}, /reset
   live/
     state.py           IncidentState (TypedDict) + Signal types
@@ -27,12 +28,14 @@ agent/
     playbooks.py       speaker templates from spec §3, verbatim; script selection logic
     responders.py      eligibility, priority, waves, role assignment
     briefing.py        911 briefing text in the spec §9.10 order
+    imessage.py        iMessage side channel: texts in the background, never awaited
     timers.py          TimerRegistry: named asyncio tasks that resume the graph with a timeout signal
     signals.py         deliver(incident_id, signal): the single entry point that resumes the graph
   io/
     speaker.py         Speaker protocol; LocalSpeaker (plays files), FakeSpeaker (tests)
     tts.py             Polly rendering; render_camera_audio(camera_id)
-    telephony.py       Telephony protocol; TwilioTelephony, FakeTelephony; destination allowlist
+    telephony.py       Telephony protocol; TwilioTelephony (optionally over Photon SIP), FakeTelephony; destination allowlist
+    messaging.py       Messenger protocol; PhotonMessenger (httpx), FakeMessenger; same allowlist
     verify.py          the one LLM call on the live path
   tests/
 ```

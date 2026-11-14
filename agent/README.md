@@ -15,7 +15,8 @@ What the app uses depends on the environment (`agent/deps.py`):
 | Piece | Configured | Not configured |
 |---|---|---|
 | Store | `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`: Supabase through `shared.db` | in-memory dev fixture (`live/devseed.py`, values not measured, never reaches the dashboard) |
-| Calls | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER`, `PUBLIC_BASE_URL` | `FakeTelephony`: calls are recorded, nothing rings |
+| Calls | `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM_NUMBER` (or Photon SIP), `PUBLIC_BASE_URL` | `FakeTelephony`: calls are recorded, nothing rings |
+| iMessage | `PHOTON_API_KEY` + `PHOTON_PROJECT_ID` (replies: `PHOTON_WEBHOOK_SECRET`) | no texts; the webhook answers 503 |
 | Speaker audio | Polly (`TTS_PROVIDER=polly` + AWS credentials) | macOS `say` into `.cache/audio/{camera_id}/*.aiff` |
 | Scene check | `shared.llm` (reasoning tier, hard timeout 8 s) | fails at once; the graph proceeds without it |
 
@@ -55,7 +56,58 @@ locks per incident. 60 sequential resumes on one thread took about 2.2 ms each w
 7. Test: `curl -X POST localhost:8000/simulate/cardiac`, then confirm on the dashboard. The
    callable responder's phone rings; pressing 1 assigns a role; the sim-911 phone hears the briefing twice.
 
+## Photon 2.0: iMessage and voice over SIP (needs a person; not verified end to end)
+
+What the code does (docs/CONTRACTS.md, Photon 2.0):
+
+- Calls: with `PHOTON_SIP_SERVER`, `PHOTON_SIP_USERNAME`, `PHOTON_SIP_PASSWORD` and `PHOTON_NUMBER`
+  all set, Twilio places each call to `sip:<number>@<PHOTON_SIP_SERVER>;transport=tls;secure=true`
+  from `PHOTON_NUMBER` (`io/telephony.py`). Our TwiML webhooks run as before.
+- iMessage (`io/messaging.py`, `live/imessage.py`), with `PHOTON_API_KEY` and `PHOTON_PROJECT_ID`:
+  the wave alert next to the app alert and the call (`channel` is `imessage` only when no call
+  was placed), the staff alert to callable staff, a role follow-up with the route and "Reply HERE",
+  a stand-down text when a texted responder is released, and the 911 briefing text to
+  `DISPATCH_SIM_NUMBER` after the call speaks it (fallback 90 s after the call is placed). Every
+  send is a background task with a hard timeout: a failure is an `imessage_failed` timeline event.
+- Replies (`api/photon.py`, `POST /photon/webhook`): `1` accept, `2` decline, `here` arrived.
+
+Only read-only Photon requests were made while building this: the project is on shared iMessage
+lines (25 seats, 0 assignments), no Voice profiles or numbers, and the assignment lookup (`GET
+.../platforms/imessage/assignments`) works with the project key.
+
+Steps:
+
+1. iMessage lines. In app.beta.photon.codes, project, iMessage: for every phone that must get texts
+   (each responder with `callable` and `consent_calls`, and the `DISPATCH_SIM_NUMBER` phone), add
+   the number and assign a line from the shared pool. Each assignment uses a seat.
+2. From each of those phones, text its assigned line once (anything, for example "hi"). A shared
+   line cannot send the first message; without this every send fails with
+   `HTTP 403 SHARED_LINE_INBOUND_REQUIRED` on the timeline.
+3. `.env`: `PHOTON_API_KEY` (a project key with project read/write and platforms read) and
+   `PHOTON_PROJECT_ID`. Restart the agent.
+4. Webhook. With the agent and the tunnel running (`PUBLIC_BASE_URL`, see above), project,
+   Webhooks, Add a destination: URL `{PUBLIC_BASE_URL}/photon/webhook`, API version `2026-07-01`,
+   event `message.received`. Copy the `whsec_...` signing secret into `PHOTON_WEBHOOK_SECRET` and
+   restart. Photon does not deliver to localhost, only to the public tunnel URL.
+5. Voice. Get a voice-eligible Photon SMS number (shared iMessage lines do not support Voice).
+   Voice, Default profile, SIP. Under Outbound calls choose Digest algorithm **MD5 (legacy)**
+   (Twilio needs it), Enable outbound and save the one-time password. Set `PHOTON_NUMBER` (E.164),
+   `PHOTON_SIP_SERVER` (the SIP connection `host:TLS port`, for example `sip.photon.codes:5061`),
+   `PHOTON_SIP_USERNAME` and `PHOTON_SIP_PASSWORD`. Twilio credentials and `PUBLIC_BASE_URL` are
+   still required; `TWILIO_FROM_NUMBER` becomes optional. The startup log says
+   "calls go out through the Photon number over SIP".
+6. Self-test. `curl -X POST localhost:8000/simulate/cardiac`, confirm on the dashboard. Expected:
+   the callable responder's phone rings with `PHOTON_NUMBER` as caller ID and gets the iMessage
+   alert; replying `1` assigns a role and brings the route text; replying `here` marks them
+   arrived on `/live`; the sim-911 phone hears the briefing twice, then gets it as a text. The
+   timeline shows `imessage_sent` / `imessage_received` (actor `photon`). A SIP `403` means the
+   profile is not on MD5.
+
 ## Not done or not verified
+
+- Photon: no message was sent and no call was placed; webhook delivery from Photon, the
+  assignment-based chat lookup (`POST /users`, `POST /spaces`) and SIP calls are written from the
+  OpenAPI spec and the Beta docs and tested with fakes only.
 
 - Supabase store, Polly rendering and real Twilio calls: written, never run (no credentials).
 - Windows and Linux audio playback: written, only macOS `afplay` was run.

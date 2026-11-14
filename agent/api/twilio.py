@@ -119,11 +119,20 @@ async def briefing(incident_id: str, request: Request, rt=Depends(get_runtime)) 
     state = await rt.get_state(incident_id)
     if state is None:
         raise HTTPException(404, "unknown incident")
-    text = build_briefing(state, rt.clock.now())
     vr = VoiceResponse()
+    if request.query_params.get("spoken") == "1":
+        # Twilio reached the end of the spoken briefing: now the same text goes out as an iMessage.
+        rt.imessage.briefing_spoken(incident_id)
+        vr.hangup()
+        return twiml(vr)
+    text = build_briefing(state, rt.clock.now())
     vr.say(text)
     vr.pause(length=1)
     vr.say(text)  # spec section 9.10: spoken twice
-    vr.hangup()
+    if rt.imessage.enabled:
+        rt.imessage.briefing_said(incident_id, text)
+        vr.redirect(f"/twilio/briefing/{incident_id}?spoken=1", method="POST")
+    else:
+        vr.hangup()
     return twiml(vr)
 

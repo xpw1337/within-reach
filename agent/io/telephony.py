@@ -112,6 +112,8 @@ class _Base:
 class FakeTelephony(_Base):
     """Records calls instead of placing them. ``fail=True`` makes every call raise (Twilio down)."""
 
+    rings = False  # nothing rings and no TwiML is fetched (agent/live/imessage.py checks this)
+
     def __init__(self, dispatch_sim_number: str | None = "+15550001111", fail: bool = False) -> None:
         super().__init__(dispatch_sim_number)
         self.calls: list[dict[str, Any]] = []
