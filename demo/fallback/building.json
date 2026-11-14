@@ -1,0 +1,601 @@
+{
+  "_note": "Hand-built demo fixture, not a real building or business. Name, address, coordinates and sizes are placeholders. Excluded from every census headline number (costar_property_id starts with FALLBACK-). Format: docs/CONTRACTS.md section 7.",
+  "building": {
+    "costar_property_id": "FALLBACK-1",
+    "name": "Fixture Fitness (demo fixture)",
+    "address": "1 Example Way, Houston, TX (fictional demo address)",
+    "city": "Houston",
+    "lat": 29.73,
+    "lng": -95.4,
+    "property_type": "gym",
+    "floors": 2,
+    "size_sqft": 30000,
+    "tenants_count": 1
+  },
+  "twin_nodes": [
+    {
+      "sweep_id": "s1",
+      "floor": 0,
+      "x": 96.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s2"
+      ],
+      "room_type": "entrance",
+      "label": "main entrance",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s2",
+      "floor": 0,
+      "x": 88.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s1",
+        "s3",
+        "s5"
+      ],
+      "room_type": "lobby",
+      "label": "front desk",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s3",
+      "floor": 0,
+      "x": 80.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s2",
+        "s4",
+        "s6"
+      ],
+      "room_type": "lobby",
+      "label": "east elevators",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s4",
+      "floor": 0,
+      "x": 80.0,
+      "y": 0.0,
+      "z": 7.0,
+      "neighbors": [
+        "s3",
+        "s17"
+      ],
+      "room_type": "elevator",
+      "label": "elevator, ground floor",
+      "is_elevator": true,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s5",
+      "floor": 0,
+      "x": 88.0,
+      "y": 0.0,
+      "z": -7.0,
+      "neighbors": [
+        "s2",
+        "s18"
+      ],
+      "room_type": "stairs",
+      "label": "east stairwell, ground floor",
+      "is_elevator": false,
+      "is_stairs": true
+    },
+    {
+      "sweep_id": "s6",
+      "floor": 0,
+      "x": 72.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s3",
+        "s7",
+        "s8"
+      ],
+      "room_type": "hallway",
+      "label": "locker room hallway",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s7",
+      "floor": 0,
+      "x": 72.0,
+      "y": 0.0,
+      "z": -9.0,
+      "neighbors": [
+        "s6"
+      ],
+      "room_type": "locker_room",
+      "label": "locker room",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s8",
+      "floor": 0,
+      "x": 64.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s6",
+        "s9"
+      ],
+      "room_type": "hallway",
+      "label": "hallway by the weight room",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s9",
+      "floor": 0,
+      "x": 56.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s8",
+        "s10"
+      ],
+      "room_type": "weight_room",
+      "label": "weight room, east end",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s10",
+      "floor": 0,
+      "x": 48.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s9",
+        "s11"
+      ],
+      "room_type": "weight_room",
+      "label": "weight room",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s11",
+      "floor": 0,
+      "x": 40.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s10",
+        "s12"
+      ],
+      "room_type": "cardio",
+      "label": "cardio floor, east",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s12",
+      "floor": 0,
+      "x": 32.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s11",
+        "s13"
+      ],
+      "room_type": "cardio",
+      "label": "cardio floor",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s13",
+      "floor": 0,
+      "x": 24.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s12",
+        "s14"
+      ],
+      "room_type": "cardio",
+      "label": "cardio floor, west",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s14",
+      "floor": 0,
+      "x": 16.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s13",
+        "s15"
+      ],
+      "room_type": "hallway",
+      "label": "west hallway",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s15",
+      "floor": 0,
+      "x": 8.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s14",
+        "s16"
+      ],
+      "room_type": "hallway",
+      "label": "west hallway, by the exit",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s16",
+      "floor": 0,
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0,
+      "neighbors": [
+        "s15"
+      ],
+      "room_type": "exit",
+      "label": "west emergency exit",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s17",
+      "floor": 1,
+      "x": 80.0,
+      "y": 4.5,
+      "z": 7.0,
+      "neighbors": [
+        "s4",
+        "s19"
+      ],
+      "room_type": "elevator",
+      "label": "elevator, second floor",
+      "is_elevator": true,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s18",
+      "floor": 1,
+      "x": 80.0,
+      "y": 4.5,
+      "z": -7.0,
+      "neighbors": [
+        "s5",
+        "s19"
+      ],
+      "room_type": "stairs",
+      "label": "east stairwell, second floor",
+      "is_elevator": false,
+      "is_stairs": true
+    },
+    {
+      "sweep_id": "s19",
+      "floor": 1,
+      "x": 80.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s17",
+        "s18",
+        "s20"
+      ],
+      "room_type": "lobby",
+      "label": "second floor landing",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s20",
+      "floor": 1,
+      "x": 72.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s19",
+        "s21"
+      ],
+      "room_type": "hallway",
+      "label": "upper hallway, east",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s21",
+      "floor": 1,
+      "x": 64.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s20",
+        "s22"
+      ],
+      "room_type": "studio",
+      "label": "studio A",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s22",
+      "floor": 1,
+      "x": 56.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s21",
+        "s23"
+      ],
+      "room_type": "studio",
+      "label": "studio B",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s23",
+      "floor": 1,
+      "x": 48.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s22",
+        "s24"
+      ],
+      "room_type": "studio",
+      "label": "spin studio",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s24",
+      "floor": 1,
+      "x": 40.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s23",
+        "s25"
+      ],
+      "room_type": "hallway",
+      "label": "upper hallway",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s25",
+      "floor": 1,
+      "x": 32.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s24",
+        "s26"
+      ],
+      "room_type": "court",
+      "label": "basketball court, east",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s26",
+      "floor": 1,
+      "x": 24.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s25",
+        "s27"
+      ],
+      "room_type": "court",
+      "label": "basketball court",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s27",
+      "floor": 1,
+      "x": 16.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s26",
+        "s28"
+      ],
+      "room_type": "court",
+      "label": "basketball court, west",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s28",
+      "floor": 1,
+      "x": 8.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s27",
+        "s29"
+      ],
+      "room_type": "track",
+      "label": "running track",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s29",
+      "floor": 1,
+      "x": 0.0,
+      "y": 4.5,
+      "z": 0.0,
+      "neighbors": [
+        "s28",
+        "s30"
+      ],
+      "room_type": "track",
+      "label": "running track, northwest corner",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s30",
+      "floor": 1,
+      "x": 0.0,
+      "y": 4.5,
+      "z": 12.0,
+      "neighbors": [
+        "s29",
+        "s31"
+      ],
+      "room_type": "track",
+      "label": "running track, west side",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s31",
+      "floor": 1,
+      "x": 0.0,
+      "y": 4.5,
+      "z": 24.0,
+      "neighbors": [
+        "s30",
+        "s32"
+      ],
+      "room_type": "stretching",
+      "label": "stretching area",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s32",
+      "floor": 1,
+      "x": 0.0,
+      "y": 4.5,
+      "z": 36.0,
+      "neighbors": [
+        "s31",
+        "s33"
+      ],
+      "room_type": "studio",
+      "label": "yoga room",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s33",
+      "floor": 1,
+      "x": 0.0,
+      "y": 4.5,
+      "z": 48.0,
+      "neighbors": [
+        "s32"
+      ],
+      "room_type": "studio",
+      "label": "yoga room, far end",
+      "is_elevator": false,
+      "is_stairs": false
+    }
+  ],
+  "panos": [],
+  "assets": [
+    {
+      "type": "aed",
+      "sweep_id": "s2",
+      "floor": 0,
+      "label": "by the front desk",
+      "source": "manual"
+    },
+    {
+      "type": "extinguisher",
+      "sweep_id": "s6",
+      "floor": 0,
+      "label": "locker room hallway",
+      "source": "manual"
+    },
+    {
+      "type": "extinguisher",
+      "sweep_id": "s12",
+      "floor": 0,
+      "label": "cardio floor",
+      "source": "manual"
+    },
+    {
+      "type": "extinguisher",
+      "sweep_id": "s23",
+      "floor": 1,
+      "label": "spin studio",
+      "source": "manual"
+    },
+    {
+      "type": "exit",
+      "sweep_id": "s1",
+      "floor": 0,
+      "label": "main entrance",
+      "source": "manual"
+    },
+    {
+      "type": "exit",
+      "sweep_id": "s16",
+      "floor": 0,
+      "label": "west emergency exit",
+      "source": "manual"
+    }
+  ],
+  "vexcel": {
+    "entrances": [
+      {
+        "lat": 29.73,
+        "lng": -95.399483,
+        "desc": "main entrance, east side",
+        "ambulance_access": true,
+        "sweep_id": "s1"
+      },
+      {
+        "lat": 29.73,
+        "lng": -95.400517,
+        "desc": "west emergency exit door",
+        "ambulance_access": true,
+        "sweep_id": "s16"
+      }
+    ],
+    "ambulance_parking": [
+      {
+        "lat": 29.73,
+        "lng": -95.399421,
+        "desc": "fire lane by the main entrance"
+      },
+      {
+        "lat": 29.729964,
+        "lng": -95.400579,
+        "desc": "west loading area"
+      }
+    ],
+    "hydrants": [
+      {
+        "lat": 29.730054,
+        "lng": -95.3994,
+        "desc": "east curb"
+      }
+    ],
+    "image_url": null
+  },
+  "camera": {
+    "id": "cam-lobby-1",
+    "sweep_id": "s3",
+    "floor": 0,
+    "landmark": "east elevators"
+  }
+}
