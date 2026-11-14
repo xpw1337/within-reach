@@ -65,7 +65,9 @@ def scan_building_bulk(
     check = budget_ok or _budget_ok
     scanner._tool_call(rid, "scan_building_bulk", {"building_id": building_id}, building_id)
 
-    pending = [p["sweep_id"] for p in db.fetch_all("panos", building_id=building_id, tiles_done=False)]
+    pending = sorted(
+        p["sweep_id"] for p in db.fetch_all("panos", building_id=building_id, tiles_done=False)
+    )
     stopped_for_budget = False
     scanned, failed = 0, []
     for i in range(0, len(pending), batch):
@@ -86,9 +88,19 @@ def scan_building_bulk(
     borderline: list[str] = []
     pinned = merged = 0
     if verify and not stopped_for_budget:
-        candidates = [
-            d["id"] for d in db.fetch_all("detections", building_id=building_id, status="candidate")
-        ]
+        # First-pass threads insert detections in completion order; sort so pinning and duplicate
+        # merging (which depend on order) give the same assets on every run.
+        rows = db.fetch_all("detections", building_id=building_id, status="candidate")
+        rows.sort(
+            key=lambda d: (
+                str(d.get("sweep_id") or ""),
+                float(d.get("tile_heading") or 0.0),
+                float(d.get("tile_pitch") or 0.0),
+                str(d.get("created_at") or ""),
+                str(d.get("id")),
+            )
+        )
+        candidates = [d["id"] for d in rows]
         for i in range(0, len(candidates), batch):
             if not check(rid):
                 stopped_for_budget = True
