@@ -136,7 +136,7 @@ def place_one(graph: nx.Graph, existing: list[str], candidates: list[str],
               limit_s: float, walk_speed_mps: float) -> Placement               # sweep_id, before/after stats
 def triangulate(ray_a: Ray, ray_b: Ray) -> tuple[float, float, float] | None
 def score_building(coverage: CoverageByType, occupancy_est: int, flags: Flags) -> BuildingScore
-def describe_route(graph: nx.Graph, route: Route) -> str                        # "14 meters, left of the elevators"
+def describe_route(graph: nx.Graph, route: Route) -> str                        # "left of the elevators" (no distance)
 
 # census/run.py
 def start_run(buildings_target: int, city: str | None, types: list[str] | None, budget_usd: float) -> str
@@ -169,7 +169,7 @@ Script IDs are stable and shared by the agent, the audio files and the dashboard
 
 `voice_check`, `cardiac_main`, `cardiac_cpr_coach`, `cardiac_aed_arrived`, `mod_breathing`, `mod_seizure`, `mod_overdose`, `fall_main`, `unsafe_stay_back`, `all_clear`.
 
-Text comes from the templates in spec §3, verbatim, in `agent/live/playbooks.py`. Placeholders `{landmark}`, `{aed_distance}`, `{aed_directions}`, `{naloxone_location}` are filled per camera from `cameras` and `camera_routes` at pre-render time. `mod_overdose` is rendered only when naloxone is mapped for that camera.
+Text comes from the templates in spec §3, verbatim, in `agent/live/playbooks.py`. Placeholders `{landmark}`, `{aed_distance}`, `{aed_directions}`, `{naloxone_location}` are filled per camera from `cameras` and `camera_routes` at pre-render time. `mod_overdose` is rendered only when naloxone is mapped for that camera. `camera_routes.directions` never contains the distance: the template adds it from `distance_m` (spec section 3 wins over the old `describe_route` example).
 
 ## 7. Fallback building format (`demo/fallback/building.json`)
 
