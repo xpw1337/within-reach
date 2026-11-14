@@ -69,15 +69,16 @@ class LiveRuntime:
             log.error("background task failed", exc_info=task.exception())
 
     async def settle(self) -> None:
-        """Wait until no tracked background task is running (tests)."""
-        for _ in range(50):
+        """Wait until tracked background tasks stop making progress (tests). Tasks blocked on the
+        fake clock stay pending; they resume when the clock advances."""
+        for _ in range(200):
+            await asyncio.sleep(0)
             pending = [t for t in self._tasks if not t.done()]
             if not pending:
-                await asyncio.sleep(0)
-                if not [t for t in self._tasks if not t.done()]:
-                    return
-                continue
-            await asyncio.gather(*pending, return_exceptions=True)
+                return
+            done, _ = await asyncio.wait(pending, timeout=0.05)
+            if not done:
+                return
 
     async def camera_context(self, camera_id: str, refresh: bool = False) -> tuple[dict, dict, dict]:
         """cameras row (+ available audio), building row, routes by target. Cached: warm-up fills it so
@@ -143,6 +144,21 @@ class LiveRuntime:
     async def get_state(self, incident_id: str) -> dict[str, Any] | None:
         snap = await self.graph.aget_state(self._config(incident_id))
         return _clean(snap.values) if snap.values else None
+
+    async def find_dispatch(self, dispatch_id: str) -> tuple[str | None, dict[str, Any] | None]:
+        """(incident_id, dispatch) for a dispatch id, from the graph state."""
+        for incident_id in list(self.known_incidents):
+            state = await self.get_state(incident_id) or {}
+            for d in state.get("dispatches") or []:
+                if d.get("id") == dispatch_id:
+                    return incident_id, d
+        row = await self.store.get_dispatch(dispatch_id)
+        if row and row.get("incident_id"):
+            state = await self.get_state(row["incident_id"]) or {}
+            for d in state.get("dispatches") or []:
+                if d.get("id") == dispatch_id:
+                    return row["incident_id"], d
+        return None, None
 
     def incident_closed(self, incident_id: str, camera_id: str) -> None:
         if self.open_by_camera.get(camera_id) == incident_id:
