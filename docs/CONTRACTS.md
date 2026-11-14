@@ -40,7 +40,7 @@ Everything here crosses a lane boundary. Change it only together with the lanes 
 | `POST /incidents/{id}/cancel_911` | `{by:string}` | `{ok:true}` (FALL playbook only) |
 | `POST /incidents/{id}/milestone` | `{kind:"cpr_started"\|"aed_arrived"\|"responder_arrived", by?:string}` | `{ok:true}` |
 | `POST /incidents/{id}/resolve` | `{by:string}` | `{status:"resolved"}` |
-| `POST /dispatches/{id}/accept` | | `{role:"patient"\|"aed_runner", status}` or `{status:"released"}` if both roles are taken |
+| `POST /dispatches/{id}/accept` | | `{role:"patient"\|"aed_runner"\|"staff", status:"accepted"}` or `{status:"released"}` if both roles are taken (`staff` for a staff-alert dispatch) |
 | `POST /dispatches/{id}/decline` | | `{status:"declined"}` |
 | `POST /dispatches/{id}/arrived` | `{with_aed?:bool}` | `{status:"arrived"}` |
 | `POST /twilio/voice/{dispatch_id}` | Twilio form | TwiML: situation, role, AED location, gather 1 digit |
@@ -48,7 +48,7 @@ Everything here crosses a lane boundary. Change it only together with the lanes 
 | `POST /twilio/briefing/{incident_id}` | Twilio form | TwiML: the 911 briefing, spoken twice |
 | `POST /simulate/{cardiac\|fall\|outdoor}` | `{camera_id?}` | `{incident_id}` (injects the same event vision would send) |
 | `POST /reset` | | `{ok:true}` clears incidents, events, dispatches; cancels timers; hangs up calls |
-| `GET /health` | | `{ok, warmed:{llm, tts, db}}` |
+| `GET /health` | | `{ok, warmed:{llm, tts, db}, metrics}` (`metrics` holds the last measured event-to-audio latency) |
 
 Rules:
 
@@ -171,7 +171,7 @@ Script IDs are stable and shared by the agent, the audio files and the dashboard
 
 `voice_check`, `cardiac_main`, `cardiac_cpr_coach`, `cardiac_aed_arrived`, `mod_breathing`, `mod_seizure`, `mod_overdose`, `fall_main`, `unsafe_stay_back`, `all_clear`.
 
-Text comes from the templates in spec §3, verbatim, in `agent/live/playbooks.py`. Placeholders `{landmark}`, `{aed_distance}`, `{aed_directions}`, `{naloxone_location}` are filled per camera from `cameras` and `camera_routes` at pre-render time. `mod_overdose` is rendered only when naloxone is mapped for that camera. `camera_routes.directions` never contains the distance: the template adds it from `distance_m` (spec section 3 wins over the old `describe_route` example).
+Text comes from the templates in spec §3, verbatim (each em-dash spoken as a comma), in `agent/live/playbooks.py`. The spec has no text for `unsafe_stay_back`, `cardiac_aed_arrived` and `all_clear`; their wording was approved by the team lead on 2026-11-14 and lives in the same file. With no AED route, `cardiac_main` drops its AED sentence. `{naloxone_location}` is the label of the naloxone asset at the end of its route. Placeholders `{landmark}`, `{aed_distance}`, `{aed_directions}`, `{naloxone_location}` are filled per camera from `cameras` and `camera_routes` at pre-render time. `mod_overdose` is rendered only when naloxone is mapped for that camera. `camera_routes.directions` never contains the distance: the template adds it from `distance_m` (spec section 3 wins over the old `describe_route` example).
 
 ## 7. Fallback building format (`demo/fallback/building.json`)
 
