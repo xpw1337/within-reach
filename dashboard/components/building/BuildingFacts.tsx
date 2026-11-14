@@ -41,10 +41,13 @@ export function ScoreSummary({
   score,
   thresholds,
   selected,
+  unconnected,
 }: {
   score: BuildingScore | null;
   thresholds: Thresholds | null;
   selected: GapType;
+  /** Positions with no route to a visible asset of the type, per type. */
+  unconnected?: Partial<Record<GapType, number>>;
 }) {
   return (
     <Panel title="Measured gaps" right={score?.rank != null ? <Badge tone="accent">rank {score.rank}</Badge> : null}>
@@ -66,6 +69,9 @@ export function ScoreSummary({
                   ) : (
                     <>
                       <span className="num">{pct(w.red)}</span> red
+                      {unconnected?.[t] ? (
+                        <span className="block text-faint">{unconnected[t]} not connected</span>
+                      ) : null}
                     </>
                   )
                 }
@@ -78,7 +84,9 @@ export function ScoreSummary({
         <Stat label={copy.peopleAtRiskEstimate} value={score ? int(score.people_at_risk) : null} size="sm" />
         <Stat label="Worst gap" value={score?.worst_gap ? assetTitle(score.worst_gap) : null} size="sm" />
       </div>
-      <p className="mt-3 text-[0.72rem] text-faint">Red share is {copy.redShareOfPositions}.</p>
+      <p className="mt-3 text-[0.72rem] text-faint">
+        Red share is {copy.redShareOfPositions}; positions not connected in the scan are left out. {copy.exitApproximation}
+      </p>
     </Panel>
   );
 }

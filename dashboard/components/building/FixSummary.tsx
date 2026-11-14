@@ -1,5 +1,5 @@
 import { Panel } from "@/components/ui";
-import { assetName, assetTitle } from "@/lib/copy";
+import { assetName, assetTitle, copy } from "@/lib/copy";
 import { pct } from "@/lib/format";
 import type { Fix, GapType, TwinNode } from "@/lib/rows";
 import { measure, type Thresholds } from "@/lib/thresholds";
@@ -10,12 +10,14 @@ export function FixSummary({
   type,
   thresholds,
   nodes,
+  unconnected,
   children,
 }: {
   fix: Fix | null;
   type: GapType;
   thresholds: Thresholds | null;
   nodes: TwinNode[];
+  unconnected?: number;
   children?: React.ReactNode;
 }) {
   const before = measure(type, fix?.before_worst_s, thresholds);
@@ -45,8 +47,9 @@ export function FixSummary({
               <span className="text-zone-red">{pct(fix.before_red_frac)}</span>
               <span className="text-lg text-muted">→</span>
               <span className="text-zone-green">{pct(fix.after_red_frac)}</span>
-              <span className="text-sm font-medium text-muted">of scanned positions</span>
+              <span className="text-sm font-medium text-muted">{copy.redShareOfPositions}</span>
             </div>
+            {unconnected ? <div className="mt-1 text-xs text-muted">{copy.unconnected(unconnected)}</div> : null}
           </div>
           <div className="text-sm">
             <span className="text-muted">New {assetTitle(type)} at </span>

@@ -28,9 +28,16 @@ export function assetPlural(type: string | null | undefined): string {
   return (type && NAMES[type]?.plural) || type || "equipment";
 }
 
-/** Never "no AED": only what the scan shows (spec rule 4). */
+/** Never "no AED": only what the scan shows (spec rule 4). Exits are found as exit signs. */
 export function noneVisible(type: string): string {
+  if (type === "exit" || type === "exit_sign") return "No exit sign visible in the scan";
   return `No ${assetName(type)} visible in the scan`;
+}
+
+/** Exit maps count exit and exit_sign assets (CONTRACTS section 1). */
+export function hasAssetOfType(assets: { type: string; source?: string | null }[], type: string): boolean {
+  const types = type === "exit" ? ["exit", "exit_sign"] : [type];
+  return assets.some((a) => a.source !== "proposed" && types.includes(a.type));
 }
 
 export const copy = {
@@ -41,9 +48,15 @@ export const copy = {
   approximationShort: "Approximate thresholds",
   thresholdsUnavailable:
     "Thresholds unavailable: the agent API is not reachable, so zones are shown as unknown.",
-  unknownZone: (type: GapType) => `Unknown: no ${assetName(type)} visible in the scan, or unreachable on the scan graph`,
+  notConnected: "Not connected in the scan",
+  /** NULL time: with the equipment in the building it means no route on the scan graph. */
+  unknownZone: (type: GapType, hasAsset: boolean) =>
+    hasAsset ? `Not connected in the scan: no route to a visible ${assetName(type)}` : noneVisible(type),
+  unconnected: (n: number) => `${n} ${n === 1 ? "position" : "positions"} not connected in the scan, left out`,
+  exitApproximation:
+    "Exit distances count exit signs visible in the scan, so they are an approximation of the distance to an exit door.",
   notMapped: "Not mapped yet",
-  redShareOfPositions: "of scanned positions",
+  redShareOfPositions: "of reachable positions",
   peopleAtRiskEstimate: "people at risk (estimate)",
   occupancyEstimate: "occupancy (estimate)",
   ownerLetterDraft: "Draft for the owner. Never sent automatically.",

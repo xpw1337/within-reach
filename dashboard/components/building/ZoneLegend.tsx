@@ -19,10 +19,12 @@ export function ZoneLegend({
   type,
   thresholds,
   counts,
+  hasAsset,
 }: {
   type: GapType;
   thresholds: ThresholdState;
   counts?: Record<SweepZone, number> | null;
+  hasAsset: boolean;
 }) {
   const t = thresholds.thresholds;
   const n = (z: SweepZone) => (counts ? <span className="num ml-auto pl-3 text-text">{counts[z]}</span> : null);
@@ -55,7 +57,7 @@ export function ZoneLegend({
         <li className="flex items-center gap-2">
           <Swatch zone="unknown" />
           <span className="text-muted">
-            {t ? copy.unknownZone(type) : `Unknown: thresholds unavailable`}
+            {t ? copy.unknownZone(type, hasAsset) : `Unknown: thresholds unavailable`}
           </span>
           {n("unknown")}
         </li>
@@ -66,8 +68,8 @@ export function ZoneLegend({
         </li>
       </ul>
       <p className="text-[0.72rem] leading-snug text-faint">
-        {copy.approximation} Counts are {copy.redShareOfPositions}; {assetName(type)} times are walking times on the
-        scan graph.
+        {copy.approximation} {assetName(type)} times are walking times on the scan graph.
+        {type === "exit" ? ` ${copy.exitApproximation}` : ""}
       </p>
     </div>
   );

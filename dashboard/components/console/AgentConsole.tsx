@@ -57,7 +57,8 @@ export function AgentConsole() {
 
   const shown = decisionsOnly ? stream.filter((e) => e.kind === "decision") : stream;
   const newest = stream[0];
-  const liveTone = events.status === "live" ? "ok" : events.status === "error" ? "down" : "warn";
+  const liveTone =
+    events.status === "live" ? "ok" : events.status === "error" ? "down" : events.status === "unconfigured" ? "idle" : "warn";
 
   if (collapsed) {
     return (

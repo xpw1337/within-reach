@@ -41,7 +41,7 @@ function sameCity(a: string | null, b: City) {
 
 function headline(g: GapType, t: Thresholds | null) {
   const limit = t ? `more than ${formatLimit(g, t)}` : `beyond the ${measureName(g)} limit`;
-  const from = g === "exit" ? "an exit" : g === "aed" ? "any AED" : "an extinguisher";
+  const from = g === "exit" ? "an exit sign" : g === "aed" ? "any AED" : "an extinguisher";
   return `have a spot ${limit} from ${from} ${copy.visibleInScan}`;
 }
 
@@ -182,7 +182,8 @@ export function CityView() {
             <Stat label={copy.peopleAtRiskEstimate} value={anyPeople ? int(peopleAtRisk) : null} size="sm" />
           </div>
           <p className="mt-3 text-[0.72rem] text-faint">
-            Counts come from building_scores; demo fixtures are excluded. {copy.approximation}
+            Counts come from building_scores; demo fixtures are excluded; red shares are {copy.redShareOfPositions}.{" "}
+            {copy.approximation} {gap === "exit" ? copy.exitApproximation : ""}
           </p>
         </Panel>
 

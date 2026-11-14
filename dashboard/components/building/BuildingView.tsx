@@ -6,7 +6,7 @@ import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useAppStatus } from "@/components/shell/AppStatus";
 import { Badge, Button, EmptyState, Panel, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
-import { assetName, assetTitle, copy } from "@/lib/copy";
+import { assetName, assetTitle, copy, hasAssetOfType } from "@/lib/copy";
 import { boundsOf, floorOf, floorsOf, hasScenario, indexCoverage, sweepZone, zoneCounts } from "@/lib/heatmap";
 import { useBuilding } from "@/lib/hooks/useBuilding";
 import { useThresholds } from "@/lib/hooks/useThresholds";
@@ -81,6 +81,15 @@ export function BuildingView({ id }: { id: string }) {
   );
   const hoveredNode = hovered ? nodeById.get(hovered) : undefined;
   const mapped = data.coverage.some((c) => c.scenario === "current");
+  // NULL time where the building has that equipment = not connected in the scan (CONTRACTS section 1).
+  const unconnected = useMemo(() => {
+    const out: Partial<Record<GapType, number>> = {};
+    for (const g of GAP_TYPES) {
+      if (!hasAssetOfType(data.assets, g)) continue;
+      out[g] = data.coverage.filter((c) => c.scenario === "current" && c.asset_type === g && c.time_s === null).length;
+    }
+    return out;
+  }, [data.assets, data.coverage]);
   const b = data.building;
   const apiDown = health.status === "unconfigured";
   const has3d = matterportAvailable(b?.matterport_model_id);
@@ -289,7 +298,12 @@ export function BuildingView({ id }: { id: string }) {
                 )}
               </div>
               <div className="space-y-4 p-4">
-                <ZoneLegend type={type} thresholds={th} counts={mapped ? counts : null} />
+                <ZoneLegend
+                  type={type}
+                  thresholds={th}
+                  counts={mapped ? counts : null}
+                  hasAsset={hasAssetOfType(data.assets, type)}
+                />
                 <div className="rounded-md border border-line bg-panel-2 p-3 text-sm">
                   <div className="label mb-1">Position</div>
                   {hoveredNode ? (
@@ -318,8 +332,8 @@ export function BuildingView({ id }: { id: string }) {
         </Panel>
 
         <div className="space-y-4">
-          <FixSummary fix={fix} type={type} thresholds={t} nodes={data.nodes} />
-          <ScoreSummary score={data.score} thresholds={t} selected={type} />
+          <FixSummary fix={fix} type={type} thresholds={t} nodes={data.nodes} unconnected={unconnected[type]} />
+          <ScoreSummary score={data.score} thresholds={t} selected={type} unconnected={unconnected} />
           <FlagsList score={data.score} assets={data.assets} mapped={mapped} />
         </div>
       </div>
