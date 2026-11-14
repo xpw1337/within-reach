@@ -5,9 +5,11 @@
 | File | Status | Purpose |
 |---|---|---|
 | `migrations/0001_init.sql` | written | The schema from spec §7, unchanged. Ask before editing. |
-| `migrations/0002_demo_policies.sql` | to write | Demo auth bypass (spec §6). |
-| `migrations/0003_storage.sql` | to write | Buckets from `docs/CONTRACTS.md` §5. |
-| `seed.sql` | to write | Demo rows from spec §12. |
+| `migrations/0002_demo_policies.sql` | written | Demo auth bypass (spec §6). |
+| `migrations/0003_storage.sql` | written | Buckets from `docs/CONTRACTS.md` §5. |
+| `migrations/0004_run_cost.sql` | written | `add_run_cost(run_id, delta)`: atomic increment of `runs.est_cost_usd` for `shared/llm.py` metering. A function only, no table change. |
+| `seed.sql` | written | Demo rows from spec §12. Fictional 555-01xx phones only. |
+| `seed.local.example.sql` | written | Template for the git-ignored `seed.local.sql` with real teammate numbers. |
 
 ## 0002_demo_policies.sql
 
@@ -32,7 +34,7 @@
 ## Order of operations for a fresh project
 
 ```
-apply migrations 0001..0003
+apply migrations 0001..0004
 python -m data.load --fallback
 psql < supabase/seed.sql   (and seed.local.sql)
 python -m census.cli rerun --building <fallback id>     # coverage, scores, fix, documents, camera_routes
