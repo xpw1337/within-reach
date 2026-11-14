@@ -19,6 +19,7 @@ Updated by the coordinator as lanes report. The source of truth for what is done
 | 2026-11-14 | Speaker scripts: spec section 3 wording verbatim, with each em-dash replaced by a comma. |
 | 2026-11-14 | Exit maps count `exit_sign` assets as exits (labeled approximation). red_frac excludes positions with no route. gap_score weights AED 0.5, extinguisher 0.25, exit 0.25 kept. |
 | 2026-11-14 | Live: wording approved for unsafe_stay_back, cardiac_aed_arrived, all_clear; no-AED cardiac drops the AED sentence; naloxone location from the asset label; staff alerts ungated; late unsafe releases dispatches. |
+| 2026-11-14 | Photon 2.0: calls stay on Twilio but go through the Photon number over SIP; iMessage alerts, role follow-ups and the briefing text through Photon's REST API; migration 0005 adds dispatch_channel 'imessage'. |
 | 2026-11-14 | Supabase: hosted project created. Root `.env` uses the new key format: the publishable key as `SUPABASE_ANON_KEY`, the secret key as `SUPABASE_SERVICE_ROLE_KEY` (supabase-py 2.34 accepts both). `SUPABASE_DB_URL` is the Session pooler string (the direct host is IPv6 only). |
 
 ## Subtask status
@@ -36,7 +37,8 @@ Legend: done = pushed and verified offline; partial = pushed, more to do; -- = n
 | 2.1 to 2.8 | done offline | a376a6b to 3ef0f03; follow-ups 0abdddd, ab9c45a (exit signs as exits, red fraction over reachable positions, placement stays in the connected part with the equipment) |
 | 3.1 to 3.8 | done offline | 0629313 to 71fb735; follow-ups a085f76, 3dc92bb, 07638bd (first ring) |
 | 4.1 to 4.5, 4.7 | done offline | 4bbb297 to 1451d7a; follow-up 884586d (approved scripts, event payloads, call_sid) |
-| 4.6, 4.8 | partial | Real Twilio calls and collapse-to-first-ring need credentials and a human |
+| 4.6, 4.8 | partial | d2de5d7 (calls over Photon SIP). Real calls and collapse-to-first-ring need Twilio credentials, a Photon number and a human |
+| 4.9 | done offline | 8a92ce4 (Photon iMessage alerts, follow-ups, replies, webhook). Real sends need line assignments, phones that text the line first, and the webhook secret; steps in agent/README.md |
 | 5.1 to 5.3 | done offline | 2af4e8d to 53d7973, 7821284. Live webcam steps in vision/README.md |
 | 5.4 | code done | 0ec1961. Six clips need humans |
 | 5.5 to 5.8 | done offline | 3a741e9 to 6285bf1, 2d27b2f (adopt seeded responder by phone). Device steps in mobile/README.md |
@@ -48,7 +50,7 @@ Hosted Supabase, 2026-11-14:
 - Realtime: an agent_events insert arrived in 0.32 s on a subscription made with the anon (publishable) key (1.2 verified).
 - `census.cli rerun --mode pipeline` on the fallback building: 198 coverage rows (current and proposed), 1 score, 2 fixes, 2 proposed assets, 3 documents (owner letter used the template: no model keys), 3 camera routes, 35 console events.
 
-Full Python suite on main: 339 passed, 2 skipped without the vision extra (2026-11-14).
+Full Python suite on main: 386 passed, 2 skipped without the vision extra (2026-11-14, after the bulk ordering fix).
 
 Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec section 3 template adds it).
 

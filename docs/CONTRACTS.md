@@ -60,7 +60,7 @@ Rules:
 ### Photon 2.0 (approved 2026-11-14)
 
 - Voice: Twilio still runs every call and its TwiML webhooks; when `PHOTON_SIP_*` is set, calls are placed through the Photon number over SIP (`To=sip:<number>@<PHOTON_SIP_SERVER>;transport=tls`, `From=PHOTON_NUMBER`, SIP auth from the Photon Voice profile). The 911 refusal applies to the underlying number.
-- iMessage: sent with Photon's REST API (`POST /v1/projects/{id}/messages`). Only to `DISPATCH_SIM_NUMBER` or a `callable` responder with `consent_calls`, under the same allowlist as calls. A responder alert goes out alongside the app alert and the call, on the same `dispatches` row; the row's `channel` is `imessage` only when no call was placed. After a role is assigned, a follow-up iMessage carries the route and asks for `here` on arrival. The 911 briefing is also sent as text to `DISPATCH_SIM_NUMBER` after it is spoken.
+- iMessage: sent with Photon's REST API (`POST /v1/projects/{id}/messages`). Only to `DISPATCH_SIM_NUMBER` or a `callable` responder with `consent_calls`, under the same allowlist as calls. A responder alert goes out alongside the app alert and the call, on the same `dispatches` row; the row's `channel` is `imessage` only when no call was placed. After a role is assigned, a follow-up iMessage carries the route and asks for `here` on arrival. The 911 briefing is also sent as text to `DISPATCH_SIM_NUMBER` after it is spoken. The SIP URI adds `;secure=true` (SRTP, per Photon's Twilio cookbook). With messaging on, the briefing TwiML ends with a `<Redirect>` to `/twilio/briefing/{incident_id}?spoken=1`, which sends the text; if that never arrives the text goes 90 s after the call is placed (an engineering timeout, not a guideline). `/photon/webhook` answers 400 on a bad signature and 503 when `PHOTON_WEBHOOK_SECRET` is unset. Shared iMessage lines can only text people who wrote to the line first.
 
 ## 3. Realtime and event streams
 
@@ -82,9 +82,9 @@ Published tables (spec §7): `agent_events`, `runs`, `building_scores`, `inciden
 
 ### `incident_events` (live timeline)
 
-`actor` is one of `vision|system|desk|responder:<id>|twilio|llm`. `kind` values:
+`actor` is one of `vision|system|desk|responder:<id>|twilio|llm|photon`. `kind` values:
 
-`detected`, `speak`, `verify_result`, `confirm_requested`, `confirmed`, `false_alarm`, `voice_check_result`, `classified`, `gate_opened`, `dispatch_sent`, `dispatch_accepted`, `dispatch_declined`, `dispatch_timeout`, `dispatch_released`, `responder_arrived`, `ems_briefed`, `police_notified`, `staff_alerted`, `milestone`, `fall_911_cancelled`, `timer_started`, `timer_fired`, `resolved`.
+`detected`, `speak`, `verify_result`, `imessage_sent`, `imessage_failed`, `imessage_received`, `confirm_requested`, `confirmed`, `false_alarm`, `voice_check_result`, `classified`, `gate_opened`, `dispatch_sent`, `dispatch_accepted`, `dispatch_declined`, `dispatch_timeout`, `dispatch_released`, `responder_arrived`, `ems_briefed`, `police_notified`, `staff_alerted`, `milestone`, `fall_911_cancelled`, `timer_started`, `timer_fired`, `resolved`.
 
 Payloads the frontends rely on:
 
@@ -96,7 +96,8 @@ Payloads the frontends rely on:
 - `voice_check_result`: `{responsive}`.
 - `verify_result`: `{is_emergency, scene_safe, hazards[], modifiers[], error?}` (after the allowlist filter).
 - `dispatch_sent`, `dispatch_accepted`, `dispatch_declined`, `dispatch_timeout`, `dispatch_released`: `{dispatch_id, responder_id, role, wave, channel, call_sid?}`.
-- `timer_fired`: `{timer}`. Timer names are the ones in `agent/DESIGN.md` (`voice_check`, `confirm_auto`, `found_down_escalate`, `wave_{n}`, `fall_911`, `announce_repeat`, `guide_tick`).
+- `timer_fired`: `{timer}`.
+- `imessage_sent`: `{purpose, dispatch_id?, responder_id?, role?, message_id}`; `imessage_failed`: `{purpose, error, ...}`; `imessage_received`: `{reply, dispatch_id, responder_id}`. `purpose` is `alert`, `staff_alert`, `role`, `stand_down` or `briefing`. Timer names are the ones in `agent/DESIGN.md` (`voice_check`, `confirm_auto`, `found_down_escalate`, `wave_{n}`, `fall_911`, `announce_repeat`, `guide_tick`).
 
 Latency metrics on `/live` are computed from `incidents` timestamps only (`collapse_at`, `first_instruction_at`, `confirmed_at`, `ems_notified_at`, `first_accept_at`, ...). One exception: first ring is the earliest `dispatches.sent_at` for the incident with a non-null `call_sid` (the call is placed when the row is written); `agent/` sets `call_sid` on the dispatch row it calls.
 
