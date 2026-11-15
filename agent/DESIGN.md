@@ -109,6 +109,7 @@ Implementation guidance:
   - witnessed: proceed on desk confirm, or automatically after `CONFIRM_AUTO_PROCEED_SECONDS`.
   - found_down: proceed only on desk confirm; after `FOUND_DOWN_ESCALATE_SECONDS` with no tap, send the 911 briefing only, no responders.
   - The speaker script is **not** gated: local audio instructions start right after classify.
+  - `REQUIRE_CONFIRM=false` (team lead, 2026-11-15): no desk confirm. Every collapse auto-proceeds at once, found down included, so responders and the 911 briefing go out as soon as the voice check classifies it. The desk can still stop everything with False alarm.
 - FALL: staff alert first; 911 briefing after `FALL_911_CANCEL_SECONDS` unless `cancel_911`.
 - `overdose` script is used only if naloxone is mapped for the camera.
 

@@ -370,6 +370,10 @@ function Controls({ incident, cmd }: { incident: Incident | null; cmd: ReturnTyp
           <Button size="sm" tone="ok" disabled={cmd.busy !== null} onClick={() => cmd.run("resolve", () => api.resolveIncident(incident.id, DESK))}>
             Resolve
           </Button>
+          {/* With REQUIRE_CONFIRM=false there is no confirm bar, so the desk's way to stop a false trigger lives here. */}
+          <Button size="sm" disabled={cmd.busy !== null} onClick={() => cmd.run("false_alarm", () => api.confirmIncident(incident.id, "false_alarm", DESK))}>
+            False alarm
+          </Button>
           <span className="mx-1 h-6 w-px bg-line" />
         </>
       )}

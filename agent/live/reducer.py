@@ -21,7 +21,8 @@ Rules encoded here, from spec section 3 and agent/DESIGN.md:
 - External actions (responders, 911 briefing) are gated by CONFIRM: witnessed auto-proceeds after
   ``CONFIRM_AUTO_PROCEED_SECONDS``; found down needs a human confirm, and after
   ``FOUND_DOWN_ESCALATE_SECONDS`` gets the 911 briefing only, no strangers. The speaker is never
-  gated.
+  gated. With ``REQUIRE_CONFIRM=false`` there is no desk confirm: every collapse auto-proceeds at
+  once (found down included), so responders go out as soon as the voice check classifies it.
 - FALL: staff first; 911 briefing after ``FALL_911_CANCEL_SECONDS`` unless cancelled.
 - Waves never hold up the 911 briefing.
 """
@@ -483,7 +484,8 @@ def _on_timeout(state, sig) -> Transition:
             updates["voice_check_done"] = True
             events.append(_event("system", "voice_check_result", {"responsive": bool(state.get("responsive"))}))
     elif name == TIMER_CONFIRM_AUTO:
-        if state.get("confirm") == "pending" and state.get("witnessed"):
+        no_confirm = not (state.get("cfg") or {}).get("require_confirm", True)
+        if state.get("confirm") == "pending" and (state.get("witnessed") or no_confirm):
             updates.update(confirm="auto", confirmed_by="auto", confirmed_at=ts)
             events.append(_event("system", "confirmed", {"by": "auto", "auto": True}))
             events += _gate_event(merge_state(state, updates))

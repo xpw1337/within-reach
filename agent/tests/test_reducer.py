@@ -154,6 +154,24 @@ def test_found_down_needs_human_and_escalates_to_911_only():
     assert "dispatch" in plan(s)
 
 
+def test_no_confirm_mode_found_down_auto_proceeds_at_once():
+    cfg = {**LiveConfig().as_state(), "require_confirm": False}
+    s = base(witnessed=False, cfg=cfg, timers={"voice_check": "t-vc", "confirm_auto": "t-c"})
+    s, _ = step(s, "timeout", ts=100.0, name="confirm_auto", token="t-c")
+    assert s["confirm"] == "auto" and s["confirmed_by"] == "auto"
+    assert plan(s) == []  # nothing goes out before the voice check classifies
+    s = end_voice_check(s)
+    assert s["playbook"] == "cardiac"
+    assert {"brief_911", "dispatch"} <= set(plan(s))
+
+
+def test_require_confirm_default_keeps_found_down_gated():
+    assert LiveConfig().require_confirm is True
+    s = end_voice_check(base(witnessed=False))
+    s, tr = step(s, "timeout", ts=110.0, name="confirm_auto", token="t-c")
+    assert not tr.applied and "dispatch" not in plan(s)
+
+
 def test_fall_911_after_timer_unless_cancelled():
     s, _ = step(base(), "responsive", victim_track_id=7)
     s = merge_state(s, classify(s).updates)

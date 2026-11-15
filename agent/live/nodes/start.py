@@ -55,7 +55,11 @@ def make(rt) -> dict[str, Any]:
     async def request_confirm(state: dict) -> dict:
         cfg = state["cfg"]
         incident_id = state["incident_id"]
-        if state.get("witnessed"):
+        if not cfg.get("require_confirm", True):
+            # REQUIRE_CONFIRM=false: no desk confirm; the gate opens at once and responders go out as
+            # soon as the voice check classifies the incident.
+            name, delay, key = TIMER_CONFIRM_AUTO, 0.0, "auto_proceed_at"
+        elif state.get("witnessed"):
             name, delay, key = TIMER_CONFIRM_AUTO, cfg["confirm_auto_proceed_seconds"], "auto_proceed_at"
         else:
             name, delay, key = TIMER_FOUND_DOWN, cfg["found_down_escalate_seconds"], "escalate_at"

@@ -120,6 +120,10 @@ class Settings(BaseSettings):
     voice_check_seconds: float = 5.0
     responsive_hold_seconds: float = 1.5
     confirm_auto_proceed_seconds: float = 10.0
+    # Spec section 3: a human confirms before strangers are alerted (witnessed collapses auto-proceed
+    # after CONFIRM_AUTO_PROCEED_SECONDS). false (team lead, 2026-11-15): every collapse the camera
+    # reports goes ahead right after the voice check, found down included, with no desk confirm.
+    require_confirm: bool = True
     found_down_escalate_seconds: float = 60.0
     fall_911_cancel_seconds: float = 60.0
     wave_size: int = 4

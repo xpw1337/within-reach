@@ -17,6 +17,8 @@ class LiveConfig:
     voice_check_seconds: float = 5
     confirm_auto_proceed_seconds: float = 10
     found_down_escalate_seconds: float = 60
+    # REQUIRE_CONFIRM (shared/config.py). False: no desk confirm, every collapse auto-proceeds at once.
+    require_confirm: bool = True
     fall_911_cancel_seconds: float = 60
     wave_size: int = 4
     accept_timeout_seconds: float = 20
@@ -41,6 +43,7 @@ _ENV_FIELDS = (
     "voice_check_seconds",
     "confirm_auto_proceed_seconds",
     "found_down_escalate_seconds",
+    "require_confirm",
     "fall_911_cancel_seconds",
     "wave_size",
     "accept_timeout_seconds",
