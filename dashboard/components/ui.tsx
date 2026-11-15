@@ -19,14 +19,14 @@ export function Panel({
   bodyClassName?: string;
 }) {
   return (
-    <section className={cx("rounded-lg border border-line bg-panel", className)}>
+    <section className={cx("rounded-2xl border-2 border-line bg-panel", className)}>
       {(title || right) && (
-        <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+        <header className="flex items-center justify-between gap-3 px-5 pb-1 pt-4">
           <h2 className="label">{title}</h2>
           {right}
         </header>
       )}
-      <div className={cx("p-4", bodyClassName)}>{children}</div>
+      <div className={cx("px-5 pb-5 pt-3", bodyClassName)}>{children}</div>
     </section>
   );
 }
@@ -114,21 +114,22 @@ export function Button({
   tone?: "default" | "primary" | "danger" | "ok" | "ghost" | "decision";
   size?: "sm" | "md" | "lg";
 }) {
+  // Chunky buttons with a darker bottom edge that presses in.
   const tones: Record<string, string> = {
-    default: "border-line-strong bg-raised text-text hover:border-accent/60",
-    primary: "border-accent bg-accent text-[#06121b] hover:brightness-110",
-    danger: "border-danger bg-danger text-white hover:brightness-110",
-    ok: "border-ok bg-ok text-[#06140d] hover:brightness-110",
-    decision: "border-decision bg-decision text-[#1a1203] hover:brightness-110",
+    default: "border-line border-b-line-strong bg-panel text-text hover:bg-panel-2",
+    primary: "border-accent border-b-accent-dark bg-accent text-white hover:brightness-105",
+    danger: "border-accent border-b-accent-dark bg-accent text-white hover:brightness-105",
+    ok: "border-ok border-b-ok-dark bg-ok text-white hover:brightness-105",
+    decision: "border-decision border-b-[#d16f00] bg-decision text-white hover:brightness-105",
     ghost: "border-transparent bg-transparent text-muted hover:text-text",
   };
-  const sizes = { sm: "px-2.5 py-1 text-xs", md: "px-3.5 py-2 text-sm", lg: "px-5 py-3 text-base" };
+  const sizes = { sm: "px-3 py-1.5 text-xs", md: "px-4 py-2 text-sm", lg: "px-6 py-3 text-base" };
   return (
     <button
       type="button"
       {...props}
       className={cx(
-        "inline-flex items-center justify-center gap-2 rounded-md border font-semibold transition disabled:cursor-not-allowed disabled:opacity-40",
+        "inline-flex items-center justify-center gap-2 rounded-xl border-2 border-b-4 font-extrabold uppercase tracking-wide transition active:translate-y-[2px] active:border-b-2 disabled:cursor-not-allowed disabled:opacity-40",
         tones[tone],
         sizes[size],
         className,

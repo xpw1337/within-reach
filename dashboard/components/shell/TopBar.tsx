@@ -10,8 +10,8 @@ import { int, usd } from "@/lib/format";
 import { useAppStatus } from "./AppStatus";
 
 const NAV = [
-  { href: "/", label: "City map" },
   { href: "/live", label: "Live" },
+  { href: "/", label: "City map" },
   { href: "/handcheck", label: "Hand-check" },
 ];
 
@@ -25,8 +25,8 @@ function NavLinks({ pathname }: { pathname: string | null }) {
             key={n.href}
             href={n.href}
             className={cx(
-              "rounded-md px-3 py-1.5 text-sm font-semibold transition",
-              active ? "bg-raised text-text" : "text-muted hover:text-text",
+              "rounded-xl px-3.5 py-1.5 text-sm font-extrabold transition",
+              active ? "bg-accent/10 text-accent" : "text-muted hover:text-text",
             )}
           >
             {n.label}
@@ -78,13 +78,12 @@ export function TopBar() {
           : "Agent API: not configured";
 
   return (
-    <header data-topbar className="flex h-14 shrink-0 items-center gap-6 border-b border-line bg-panel px-5">
-      <Link href="/" className="flex items-center gap-2.5">
-        <span className="relative flex size-6 items-center justify-center">
-          <span className="absolute inset-0 rounded-full border-2 border-accent/40" />
-          <span className="size-2.5 rounded-full bg-accent" />
-        </span>
-        <span className="text-[1.05rem] font-bold tracking-tight">Within Reach</span>
+    <header data-topbar className="flex h-16 shrink-0 items-center gap-6 border-b-2 border-line bg-panel px-6">
+      <Link href="/live" className="flex items-center gap-2">
+        <svg viewBox="0 0 24 24" className="size-6 fill-accent" aria-hidden>
+          <path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z" />
+        </svg>
+        <span className="text-[1.35rem] font-black tracking-tight text-accent">within reach</span>
       </Link>
       <Suspense fallback={<NavLinks pathname={null} />}>
         <CurrentNav />
