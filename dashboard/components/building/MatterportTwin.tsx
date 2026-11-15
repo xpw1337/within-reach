@@ -112,7 +112,7 @@ export function MatterportTwin({
     const timer = window.setTimeout(() => {
       if (!sdkRef.current && !cancelled) {
         setStatus("failed");
-        setError("The Matterport SDK did not connect in time.");
+        setError("The Matterport SDK did not connect in time");
       }
     }, CONNECT_TIMEOUT_MS);
     void (async () => {
@@ -130,6 +130,8 @@ export function MatterportTwin({
         sdkRef.current = sdk;
         setStatus("ready");
       } catch (e) {
+        // A real failure: stop the connect timer so it cannot replace this error with a timeout.
+        window.clearTimeout(timer);
         if (cancelled) return;
         setStatus("failed");
         setError(e instanceof Error ? e.message : String(e));
