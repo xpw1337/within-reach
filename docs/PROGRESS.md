@@ -21,6 +21,8 @@ Updated by the coordinator as lanes report. The source of truth for what is done
 | 2026-11-14 | Live: wording approved for unsafe_stay_back, cardiac_aed_arrived, all_clear; no-AED cardiac drops the AED sentence; naloxone location from the asset label; staff alerts ungated; late unsafe releases dispatches. |
 | 2026-11-14 | Photon 2.0: calls stay on Twilio but go through the Photon number over SIP; iMessage alerts, role follow-ups and the briefing text through Photon's REST API; migration 0005 adds dispatch_channel 'imessage'. |
 | 2026-11-14 | Photon messaging: keep staff texts with the ungated staff alert, the stand-down text on release, and the late-reply notice. Shared iMessage line (the free plan cannot buy dedicated lines); each receiving phone texts the line once before the demo. |
+| 2026-11-14 | Live roles and ranking (team lead, landed in e51ae85): with an AED route for the camera the first helper accept is the AED runner and the second goes to the person; with no AED route the first accept goes to the person. Waves rank nearest to the camera first. A staff accept means "go to the person" (status only, no helper role). |
+| 2026-11-14 | Live demo building: Rabinowitz Hall, Princeton (Matterport `P3S6VUTP3qB`), loaded as `DEMO-RABINOWITZ` and kept out of the census headline, rankings and report (d18e318, docs/NEXT.md section 2a). |
 | 2026-11-14 | Supabase: hosted project created. Root `.env` uses the new key format: the publishable key as `SUPABASE_ANON_KEY`, the secret key as `SUPABASE_SERVICE_ROLE_KEY` (supabase-py 2.34 accepts both). `SUPABASE_DB_URL` is the Session pooler string (the direct host is IPv6 only). |
 
 ## Subtask status
@@ -51,16 +53,18 @@ Hosted Supabase, 2026-11-14:
 - Realtime: an agent_events insert arrived in 0.32 s on a subscription made with the anon (publishable) key (1.2 verified).
 - `census.cli rerun --mode pipeline` on the fallback building: 198 coverage rows (current and proposed), 1 score, 2 fixes, 2 proposed assets, 3 documents (owner letter used the template: no model keys), 3 camera routes, 35 console events.
 
-Full Python suite on main: 386 passed, 2 skipped without the vision extra (2026-11-14, after the bulk ordering fix).
+Full Python suite on main: 422 passed, 2 skipped without the vision extra (2026-11-14, at ad79cce). Dashboard: 44 vitest tests pass; `tsc --noEmit` is clean after `npx next typegen` (PageProps and LayoutProps are generated types). Mobile: `npm run typecheck` is clean; `npm run check:georef` needs Node 22.18 or later (it imports TypeScript): on Node 22.13 run it with `--experimental-strip-types`, and all checks pass.
+
+Teammate commits d18e318 to ad79cce (2026-11-14): Rabinowitz demo building through the Matterport Model API (`data/matterport.py`, needs `MATTERPORT_API_KEY` and `MATTERPORT_API_TOKEN`), the roles and ranking change above, AED pickup and AED help milestones, and the mobile floor plan, step-tracked dot and on-site calibration. Open demo-building to-dos D3 to D6 are in docs/NEXT.md section 2a.
 
 Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec section 3 template adds it).
 
 ## Before going on stage
 
-- Which phone rings: staff are never called (they get the ungated staff alert, and nobody gets two alerts), so the ringing responder phone must be a non-staff callable responder (teammate B, public). The first accept becomes the patient responder and the second the AED runner, so the "You're the AED runner" moment needs two real phones that accept in that order.
+- Which phone rings: staff are never called (they get the ungated staff alert and are left out of the waves), so the ringing responder phone must be a non-staff callable responder (teammate B, public). Waves are nearest first to the camera (e51ae85). With an AED route for the camera, the first accept is the AED runner and the second goes to the person; with no AED route the first accept goes to the person and there is no runner. Both moments on stage need two real phones that accept in that order.
 - Move `DISPATCH_SIM_NUMBER` to a different teammate's phone than the responder phone, or the briefing call lands as call waiting.
-
 - Seeded responders go stale 10 minutes after `last_seen_at`: refresh them (re-run the seed) right before the demo.
+- Demo on Rabinowitz Hall (`cam-atrium-1`, loaded in the hosted DB as `DEMO-RABINOWITZ`): every seeded responder sits on the fallback building, so on that camera nobody is eligible and no staff alert goes out (checked 2026-11-14). It needs responders with that building's id and positions inside its geofence. Local testing still uses `CAMERA_ID=cam-lobby-1`, where the team lead's phone (teammate B) is first in wave 1 at 22 m.
 
 ## Waiting on a person
 
