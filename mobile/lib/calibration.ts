@@ -19,7 +19,13 @@ export type RefSpot = {
   /** The sweep to stand on. */
   id: string;
   kind: 'patient' | 'aed' | 'label';
-  title: string;
+  /**
+   * The place in words, straight from the data: the sweep's label (for the patient spot, else the
+   * camera's landmark). Null when the data has none.
+   */
+  place: string | null;
+  /** The camera's name (patient spot) or the AED's label (AED spot), when the data has one. */
+  note: string | null;
   floor: number;
   plan: PlanPoint;
 };
@@ -44,28 +50,28 @@ export async function loadCalibrationData(buildingId: string): Promise<Calibrati
 
 /**
  * The spots to record, in this order: each camera's sweep (where the person would be), each AED's
- * sweep, then every other sweep that has a label. A sweep is listed once.
+ * sweep, then every other sweep that has a label. A sweep is listed once. The screen turns `place`
+ * and `note` into words (lib/copy.ts).
  */
 export function referenceSpots(data: CalibrationData): RefSpot[] {
   const byId = new Map(data.nodes.map((n) => [n.sweep_id, n]));
   const out: RefSpot[] = [];
   const seen = new Set<string>();
-  const add = (id: string | null, kind: RefSpot['kind'], title: string) => {
+  const add = (id: string | null, kind: RefSpot['kind'], place: string | null, note: string | null) => {
     if (!id || seen.has(id)) return;
     const n = byId.get(id);
     if (!n || typeof n.x !== 'number' || typeof n.z !== 'number') return;
     seen.add(id);
-    out.push({ id, kind, title, floor: n.floor ?? 0, plan: { x: n.x, z: n.z } });
+    out.push({ id, kind, place, note, floor: n.floor ?? 0, plan: { x: n.x, z: n.z } });
   };
   for (const c of data.cameras) {
-    const where = c.landmark ?? byId.get(c.sweep_id ?? '')?.label ?? null;
-    add(c.sweep_id, 'patient', `Patient spot: ${c.name ?? c.id}${where ? `, ${where}` : ''}`);
+    const sweepLabel = byId.get(c.sweep_id ?? '')?.label ?? null;
+    add(c.sweep_id, 'patient', sweepLabel ?? c.landmark ?? null, c.name ?? null);
   }
   for (const a of data.aeds) {
-    const where = a.label ?? byId.get(a.sweep_id ?? '')?.label ?? null;
-    add(a.sweep_id, 'aed', `AED spot${where ? `: ${where}` : ''}`);
+    add(a.sweep_id, 'aed', byId.get(a.sweep_id ?? '')?.label ?? null, a.label ?? null);
   }
   const labeled = data.nodes.filter((n) => n.label).sort((a, b) => (a.label ?? '').localeCompare(b.label ?? ''));
-  for (const n of labeled) add(n.sweep_id, 'label', `Labeled spot: ${n.label}`);
+  for (const n of labeled) add(n.sweep_id, 'label', n.label, null);
   return out;
 }

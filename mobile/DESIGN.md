@@ -17,6 +17,7 @@ mobile/
     released.tsx
   components/
     FloorPlan.tsx            indoor plan (react-native-svg) and the walking helper dot
+    CalibrationPlan.tsx      calibration plan: numbered spots, the spot to stand on, GPS dot, north
   lib/
     supabase.ts              client from EXPO_PUBLIC_SUPABASE_URL / ANON_KEY
     api.ts                   accept, decline, arrived, milestone (agent API); quiet one-retry helper
@@ -24,9 +25,10 @@ mobile/
     stepWalk.ts              pure: step readings -> steps on a leg -> meters along it, glide smoothing
     useStepWalk.ts           per leg: pedometer (expo-sensors) or the timed walk fallback
     georef.ts                pure: lat/lng <-> plan (x, z), calibration solve, GPS start accuracy rule
-    georefDefaults.ts        committed calibrations per building (empty until measured on site)
+    georefDefaults.ts        committed calibrations per building (only from a real calibration on site)
     georefStore.ts           calibrations and recorded spots in AsyncStorage; GPS recording and fresh fix
     calibration.ts           calibration screen data: building, sweeps, reference spots (read only)
+    useLiveFix.ts            live GPS watch for the calibration screen (accuracy, precise location)
     useHelperStart.ts        first leg's start: GPS, a tap on the plan, or the simulated start
     speech.ts                on-device speech, audible with the iOS silent switch on
     aedHelp.ts               "GIVE ME HELP WITH AED": milestone + open the AED help screen
@@ -138,19 +140,50 @@ building), then a rotation, then a translation; scale stays 1 (the scan is in me
   of the mirrored fit as a diagnostic only.
 - Where a calibration comes from: AsyncStorage on the phone (`within-reach.georef.v1.<building id>`,
   saved by the calibration screen with its date) wins over `lib/georefDefaults.ts` (keyed by
-  `costar_property_id`, else building id; committed empty, filled only from a real calibration).
-  With neither, the GPS start is off. No database writes and no schema change.
+  `costar_property_id`, else building id; filled only from a real calibration on site). The demo
+  building (`DEMO-RABINOWITZ`) has one, recorded 2026-11-14 from 4 spots, 3.64 m RMS. With neither,
+  the GPS start is off. No database writes and no schema change.
 
 **Calibration** (`app/calibrate.tsx`, hidden: long press about 1 s on the Home title; not in the alert
-flow). For a building (the profile's, or searched) it lists reference spots: each camera's sweep
-(the patient spot), each AED's sweep, then every other labeled sweep, and draws the selected spot
-on the plan. "Record here" watches GPS in `Accuracy.BestForNavigation` for `RECORD_MS` (10 s),
-ignores fixes time-stamped before the start, and stores the mean lat/lng, the mean reported accuracy
-and the fix count (AsyncStorage `within-reach.georef-spots.v1.<building id>`). With 2 or more spots it
-solves, shows the rotation, translation, per-spot residuals, GPS vs scan distance per pair and the
-mirror check, saves on the phone on request, shows a block to paste into `lib/georefDefaults.ts`
-(selectable text and the system share sheet), and "Check my position now" runs the alert's GPS start
-rule against the calibration in use. README section 7 has the on-site procedure.
+flow). A step-by-step flow with one big button pinned at the bottom of every step and all wording in
+`lib/copy.ts`. Four views:
+- **Overview.** The building (the profile's, or searched). First the status: "Already calibrated"
+  with the date, spot count and typical error of the calibration in use (the team's committed one,
+  or this phone's with a remove button), or "Not calibrated yet" with what that means for alerts.
+  Then what calibration does, the plan with the reference spots numbered (each camera's sweep, the
+  patient spot; each AED's sweep; then every other labeled sweep), the list of spots by name (sweep
+  label, else the camera's landmark), and the setup (Precise Location, how to hold the phone). Button:
+  "Start calibration", "Calibrate again" or "Continue at spot n of N"; "See the result" when all are
+  recorded.
+- **One spot** ("Spot 2 of 4", numbered circles to jump, green when recorded). The spot's name and
+  why it is on the list; the plan (`components/CalibrationPlan.tsx`) with the spot large and red with
+  its name, the others numbered. With a calibration in use, `lib/useLiveFix.ts` watches GPS
+  (`Accuracy.BestForNavigation`, 1 s) and the plan adds where GPS puts you converted with that
+  calibration, a halo of the phone's reported accuracy, a dashed line to the spot, a north arrow from
+  the calibration's rotation (north on the drawing is (-sin r, -cos r) in x right, z down) and "GPS
+  puts you about n m from spot 2"; "You are close" only when the distance is within the reported
+  accuracy and that accuracy is at most `MAX_START_ACCURACY_M` (15 m). The line above the button
+  shows the phone's accuracy as good enough (at most `MAX_START_ACCURACY_M`, the alert's own limit, no
+  separate figure) or "wait for 15 m or better"; no permission or approximate location only (iOS
+  Precise Location off, Android coarse) disables the button with how to fix it. "I'm standing at spot
+  n" runs the unchanged recording: GPS in `Accuracy.BestForNavigation` for `RECORD_MS` (10 s),
+  fixes time-stamped before the start ignored, mean lat/lng, mean reported accuracy and fix count
+  stored (AsyncStorage `within-reach.georef-spots.v1.<building id>`). The live watch pauses during
+  the recording so the recording's watch runs alone. A countdown bar replaces the button, a haptic
+  marks the end, then "Go to spot n+1" (the next unrecorded spot) or "See the result".
+- **Result** (2 or more spots). "Typical error: about n m" (the RMS of the residuals) with what it
+  means, then a verdict: better or not than the calibration in use (3 or more spots), a warning with
+  2 spots (the residuals cannot show a wrong rotation), "Too rough to use" at `MAX_START_ACCURACY_M`
+  or more, "Something is off" when the mirrored fit is closer than the real one. Each spot with its
+  residual, the worst marked, "Redo" and "Leave out". The bottom button is "Use it on this phone" when
+  the verdict is good, else the spot to record or redo. Rotation, translation, pair distances, the
+  mirror RMS and the block for `lib/georefDefaults.ts` (selectable, and the system share sheet) sit
+  behind "Show details for the team".
+- **Check** ("Check where GPS puts me"). The live GPS dot on the camera's floor with the alert's own
+  GPS start rule (`judgeStartFix`) in plain words, the scan point it would start from ringed, and the
+  nearest named spot.
+The math, the stored formats and the committed values are unchanged. README section 7 has the
+on-site procedure.
 
 **AED help**: the seven steps in `lib/copy.ts` (general public AED guidance, not medically reviewed
 by the team; the AED's own voice comes first). Step 1 is spoken on open, the screen only advances on

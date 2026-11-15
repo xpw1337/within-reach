@@ -193,13 +193,17 @@ moves while you stand still, and it never switches to the timed walk in the midd
 steps ever arrive, the buttons still work and snap the dot. Note the phone model, the delay before
 the first movement, and the typical gap between bursts.
 
-### 7. Georeference calibration on site, and the GPS start (not yet verified on a phone)
+### 7. Georeference calibration on site, and the GPS start
 
-Typecheck, lint, both bundles and the Node check of the math (`npm run check:georef`: round trips, a
-known rotation, the mirror check, exact and mirrored solves, the start accuracy rule, and the noise
-simulation below) pass. Nothing in this section has run on a phone, and no calibration has been
-recorded yet: `lib/georefDefaults.ts` is empty, so until someone does this the GPS start is off and
-every alert uses "Tap the map where you are", then the simulated start.
+**Status: the demo building is already calibrated.** The team recorded it on site on 2026-11-14 from
+4 spots (patient spot, AED spot, corridor wing, atrium edge), residual 3.64 m RMS, and it is committed
+in `lib/georefDefaults.ts` under `'DEMO-RABINOWITZ'`. Every phone with this build uses it, so **nobody
+needs to calibrate for the demo**. Calibrate again only if the blue dot in an alert starts in the wrong
+part of the building. The calibration screen was then rebuilt as the step-by-step flow below:
+typecheck, lint of the changed files, the web and iOS bundles and the Node check of the math
+(`npm run check:georef`: round trips, a known rotation, the mirror check, exact and mirrored solves,
+the start accuracy rule, and the noise simulation below) pass, and the flow was clicked through in
+headless Chrome at phone size with faked GPS. The new screen has not run on a phone yet.
 
 **What it does.** After Accept, if the building has a calibration and the app already has location
 permission, the phone takes one fresh high-accuracy fix, converts it to the floor plan and snaps it to
@@ -217,36 +221,61 @@ start is used. The buttons always work.
 3. Each spot takes 10 s of recording plus the walk; plan for all the labeled spots.
 
 **Open the calibration screen.** On Home, press and hold the "Within Reach" title for about a second.
-It opens the building from your profile; "Change building" searches for another. This screen is for
-the team only and writes nothing to the database.
+It opens the building from your profile; "Change building" searches for another. The first card says
+whether the building is calibrated: "Already calibrated" with the team's date, spot count and typical
+error (or this phone's own calibration, with "Remove this phone's calibration"), or "Not calibrated
+yet". Below it: what calibration does, the plan with the numbered spots, the list of spots (tap one to
+go straight to it) and what to set up first. This screen is for the team only and writes nothing to the
+database.
 
-**Where to stand.** The list shows the patient spot (the camera's sweep), the AED spot and every other
-labeled sweep. In the demo building that is "central atrium" (patient), "Gothic arcade gate" (AED),
-"corridor wing" and "atrium edge near the main corridor". Tap a spot to see it as the blue dot on the
-plan.
-1. Walk to the spot and stand where the scanner stood for that sweep; use the plan on this screen and
-   the spot's name to find it. Being a meter off adds about a meter of error to that spot.
-2. Hold the phone still at chest height, screen up. Wait about half a minute after arriving so GPS
-   can settle (a habit, not a measured figure).
-3. Tap "Record here" and stand still for the 10 s countdown. The card then shows the number of fixes
-   and the accuracy the phone reported. If no fix arrives, move nearer a window or the entrance and
-   try again.
+**Walk the spots.** Tap the big button at the bottom: "Calibrate again" ("Start calibration" when there
+is no calibration, "Continue at spot n of 4" when some are recorded). The spots are the patient spot
+(the camera's sweep), the AED spot and every other labeled sweep, in this order for the demo building:
+1 "Central atrium" (patient), 2 "Gothic arcade gate" (AED), 3 "Atrium edge near the main corridor",
+4 "Corridor wing". The screen shows one spot at a time: "Spot 2 of 4", a row of numbered circles to
+jump between spots (green once recorded), the spot's name in large type and why it is on the list.
+1. Find the spot. On the plan it is the big red numbered circle with its name: exactly where the
+   scanner stood for that sweep. When a calibration is already in use (it is for the demo building),
+   a blue dot shows where GPS puts you, with a halo the size of the accuracy the phone reports, a
+   dashed line from you to the spot and an N arrow for north, and the line above the plan says "GPS
+   puts you about n m from spot 2". When you are within the phone's reported accuracy of the spot and
+   that accuracy is 15 m or better, it says "You are close" instead. The dot comes from the calibration
+   in use (about 3.6 m typical error), so it only gets you to the right area: use the name and the plan
+   to stand on the exact place. Being a meter off adds about a meter of error to that spot.
+2. Wait for GPS. Hold the phone flat at chest height, screen up. The line above the button shows the
+   accuracy the phone reports: green "good enough" at 15 m or better (the same limit the alert's GPS
+   start uses), amber "wait for 15 m or better" above that. Waiting about half a minute after arriving
+   helps it settle (a habit, not a measured figure). If location is not allowed or Precise Location is
+   off, the screen says so in red, the button stays off, and "Check again" retries after you fix it in
+   Settings.
+3. Tap "I'm standing at spot n" and stand still. A blue bar counts down the 10 s with the number of GPS
+   readings. When it is done the phone buzzes, the circle turns green, the line says "Spot n recorded"
+   and the button becomes "Go to spot n+1" (or "See the result" after the last one). The page also shows
+   the readings, the accuracy and "Record spot n again". If no fix arrives, the line says so: move
+   nearer a window or the entrance and tap the button again. "Skip this spot" moves on; "All spots"
+   goes back to the first screen.
 4. Record as many spots as you can, and always the two that are farthest apart. Rotation error is
    roughly GPS error divided by the distance between the spots, so spots close together (the atrium edge is
    only 3.4 m from the atrium center) add little on their own.
 
-**Read the residuals.** With two or more spots the Result card shows the rotation, the translation and,
-on each spot card, the residual: how far that spot's GPS lands from its scan position after the fit.
+**Read the result.** With two or more spots, "See the result" shows "Typical error: about n m" in large
+type (the RMS of the per-spot residuals: how far each spot's GPS lands from its scan position after the
+fit), a verdict in plain words, and each spot with its own error, "Redo" and "Leave out" (the worst one
+is marked when there are 3 or more).
+- **Better than the calibration in use** (3 or more spots, a lower typical error than the one in use,
+  no warning): the bottom button is "Use it on this phone". Otherwise the bottom button takes you to
+  the spot to record or redo, and "Use it on this phone anyway" is in the page.
 - **Two spots:** the fit always splits the difference, so both residuals are equal: half the gap
-  between the GPS distance and the scan distance (both shown per pair). Small residuals do NOT mean
-  the rotation is right. Record a third spot.
+  between the GPS distance and the scan distance. Small residuals do NOT mean the rotation is right.
+  The screen asks for a third spot.
 - **Three or more spots:** residuals of a few meters are what indoor GPS usually gives. One spot much
-  worse than the others: record it again. All of them near or above 15 m: the GPS start will rarely be
-  used in an alert, and when it is, the start may be on the wrong side of the room.
-- **Pair distances:** if GPS says two spots are 30 m apart and the scan says 11 m, at least one of the
-  fixes is bad.
-- **Mirror check** (three or more spots): the RMS of the same fit with the plan flipped. It should be
-  clearly worse than the real fit. If the flipped fit is much better, stop and tell the team.
+  worse than the others: redo it. A typical error of 15 m or more shows "Too rough to use": the GPS
+  start would rarely be used in an alert, and when it is, the start may be on the wrong side of the room.
+- **Mirror check** (three or more spots): the same fit with the plan flipped. If it fits closer than
+  the real one, the screen says "Something is off": stop and tell the team.
+- "Show details for the team" has the rotation, the translation, the RMS, the mirror RMS, the GPS and
+  scan distance for each pair of spots (if GPS says two spots are 30 m apart and the scan says 11 m, at
+  least one of the fixes is bad) and the block for `lib/georefDefaults.ts`.
 
 What to expect from GPS noise (from `npm run check:georef`: a simulation with independent Gaussian
 noise on each fix's east and north, not a measurement). With the patient and AED spots alone, 11.0 m
@@ -257,19 +286,21 @@ All four labeled spots together roughly halve the rotation error. Indoor GPS noi
 than this and is not independent between nearby fixes, so treat these as a guide only.
 
 **Save and commit.**
-1. "Save on this phone" stores the calibration with today's date. Alerts on this phone now try the
-   GPS start in this building. A calibration saved on the phone always wins over the committed one.
-2. Under "For lib/georefDefaults.ts", select the text or tap "Share these numbers" (Copy, Notes or
-   AirDrop to a laptop). Paste the block between the braces of `GEOREF_DEFAULTS` in
-   `mobile/lib/georefDefaults.ts`, keep the key it shows (`'DEMO-RABINOWITZ'` for the demo building),
-   run `npm run typecheck`, and commit. Every other phone then uses it.
-3. To try the committed numbers on the phone that calibrated, tap "Remove the calibration saved on
-   this phone" (the card then says "Committed default" once the new build is loaded).
+1. "Use it on this phone" stores the calibration with today's date. Alerts on this phone now use it
+   in this building. A calibration saved on the phone always wins over the committed one.
+2. "Send the numbers to the team" opens the share sheet (Copy, Notes or AirDrop to a laptop); the same
+   block is selectable under "Show details for the team". Paste it between the braces of
+   `GEOREF_DEFAULTS` in `mobile/lib/georefDefaults.ts` in place of the entry with the same key (keep the
+   key it shows, `'DEMO-RABINOWITZ'` for the demo building), run `npm run typecheck`, and commit. Every
+   other phone then uses it.
+3. To go back to the committed numbers on the phone that calibrated, tap "Remove this phone's
+   calibration" on the first screen (it then shows the team's calibration from the build).
 
 **Test the GPS start on a phone.**
-1. On the calibration screen, at three or four places you can identify on the plan, tap "Check my
-   position now". It shows the phone's accuracy, the converted point, the nearest sweep and whether an
-   alert would use the GPS start. Compare the nearest sweep with where you are actually standing.
+1. On the first screen of the calibration, tap "Check where GPS puts me" and walk to three or four
+   places you can identify on the plan. It shows the live blue dot, the phone's accuracy, the nearest
+   named spot and whether an alert would use the GPS start, and if so rings the scan point it would
+   start from. Compare that with where you are actually standing.
 2. Then the real flow: phone on duty with location allowed, standing somewhere on the camera's floor.
    Trigger an alert (section 5 setup) and tap Accept. Expect "Checking GPS for your start
    position..." for up to 4 s, then the blue dot at the nearest sweep with "Start position from GPS
@@ -282,8 +313,8 @@ than this and is not independent between nearby fixes, so treat these as a guide
 4. Outside, more than 15 m from the building's sweeps: expect the tap prompt (off the map), not a dot.
 
 **What a bad result looks like.** The dot starts on the other side of the atrium or in another wing
-from where you stand; "Check my position now" names a different nearest sweep each time while you
-stand still; the converted point jumps several meters between checks; the reported accuracy is above
-15 m so the tap prompt shows every time; or the route starts behind a wall from you. Any of these:
-record more spots farther apart, check Precise Location, or leave the calibration out (remove it on the
-phone and keep `lib/georefDefaults.ts` empty) and use the tap start for the demo.
+from where you stand; on "Check where GPS puts me" the blue dot jumps several meters or the alert start
+moves between scan points while you stand still; the reported accuracy is above 15 m so the tap prompt
+shows every time; or the route starts behind a wall from you. Any of these: record more spots farther
+apart, check Precise Location, or leave the calibration out (remove it on the phone and take the
+building's entry out of `lib/georefDefaults.ts`) and use the tap start for the demo.
