@@ -13,7 +13,10 @@ type MpSdkLite = {
     add(...tags: { label?: string; anchorPosition: Vec3; stemVector: Vec3; color?: { r: number; g: number; b: number } }[]): Promise<string[]>;
   };
   Sweep: {
-    moveTo(sweep: string, options: { transition?: string; transitionTime?: number }): Promise<string>;
+    moveTo(
+      sweep: string,
+      options: { transition?: string; transitionTime?: number; rotation?: { x: number; y: number } },
+    ): Promise<string>;
   };
   Camera?: { TransitionType?: { FLY?: string } };
   disconnect?: () => void;
@@ -31,6 +34,19 @@ const TAG_COLOR: Record<string, { r: number; g: number; b: number }> = {
   // Demo props placed by the team: the --warn orange, never the color of an AED from the scan.
   simulated: { r: 1, g: 0.54, b: 0.24 },
 };
+/**
+ * View angle (Sweep.moveTo rotation.y, degrees) that faces from one scan point toward another.
+ * Measured on the demo model: y = 0 faces -z and y = 90 faces -x, so y = atan2(-dx, -dz).
+ */
+export function yawToward(from: { x: number; z: number }, to: { x: number; z: number }): number {
+  return (Math.atan2(-(to.x - from.x), -(to.z - from.z)) * 180) / Math.PI;
+}
+
+/** How long one walked segment takes on screen: real walking time, kept between 1.2 s and 10 s. */
+export function segmentMs(meters: number, mps: number): number {
+  return Math.min(10000, Math.max(1200, (meters / Math.max(0.2, mps)) * 1000));
+}
+
 const TAG_LABEL: Record<string, string> = { aed: "AED", extinguisher: "Extinguisher", exit: "Exit", exit_sign: "Exit sign" };
 
 /** Shown only when both the SDK key and the building's Matterport model id exist. */
@@ -50,6 +66,8 @@ export function MatterportTwin({
   showProposed = false,
   flyPath,
   flyKey,
+  walk = null,
+  onWalkStep,
   extraTags = [],
   height = 560,
 }: {
@@ -60,6 +78,13 @@ export function MatterportTwin({
   /** Sweep ids to fly along; a new flyKey restarts the flight. */
   flyPath?: string[] | null;
   flyKey?: number | null;
+  /**
+   * A paced walk along `path`: each segment flies for as long as walking it takes at `mps`, facing
+   * the next point. A new `key` starts it; null stops it after the current segment.
+   */
+  walk?: { path: string[]; key: number; mps: number } | null;
+  /** Called with the index in `walk.path` of each point the walk reaches; -1 when it ends or stops. */
+  onWalkStep?: (i: number) => void;
   /** Tags that are not assets (for example the person on a responder route), at a sweep's position. */
   extraTags?: { key: string; label: string; sweep_id: string; color: { r: number; g: number; b: number } }[];
   /** CSS height: pixels, or any CSS length such as "60dvh". */
@@ -184,6 +209,66 @@ export function MatterportTwin({
       cancelled = true;
     };
   }, [status, flyKey]);
+
+  // Paced walk: slow, smooth flights between scan points, facing the way the walk goes.
+  const walkPlan = useEffectEvent(() => walk);
+  const reportStep = useEffectEvent((i: number) => onWalkStep?.(i));
+  const positions = useEffectEvent(() => new Map(nodes.map((n) => [n.sweep_id, n])));
+  const walkKey = walk ? walk.key : null;
+  useEffect(() => {
+    const sdk = sdkRef.current;
+    const w = walkPlan();
+    if (status !== "ready" || !sdk || !w || w.path.length === 0) return;
+    let cancelled = false;
+    const pos = positions();
+    const at = (id: string) => {
+      const n = pos.get(id);
+      return n && typeof n.x === "number" && typeof n.z === "number" ? { x: n.x, z: n.z } : null;
+    };
+    const wait = (ms: number) => new Promise((r) => window.setTimeout(r, ms));
+    const transition = sdk.Camera?.TransitionType?.FLY ?? "transition.fly";
+    void (async () => {
+      const path = w.path;
+      // Turn in place toward the first segment, then walk it point by point.
+      const first = at(path[0]);
+      const second = path.length > 1 ? at(path[1]) : null;
+      try {
+        await sdk.Sweep.moveTo(path[0], {
+          transition,
+          transitionTime: 900,
+          ...(first && second ? { rotation: { x: -5, y: yawToward(first, second) } } : {}),
+        });
+      } catch {
+        // an unknown sweep: keep going
+      }
+      if (cancelled) return;
+      reportStep(0);
+      for (let i = 1; i < path.length; i++) {
+        if (cancelled) return;
+        const a = at(path[i - 1]);
+        const b = at(path[i]);
+        const ms = a && b ? segmentMs(Math.hypot(b.x - a.x, b.z - a.z), w.mps) : 1500;
+        const started = Date.now();
+        try {
+          await sdk.Sweep.moveTo(path[i], {
+            transition,
+            transitionTime: ms,
+            ...(a && b ? { rotation: { x: -5, y: yawToward(a, b) } } : {}),
+          });
+        } catch {
+          // a sweep the SDK does not know: skip it
+        }
+        const left = ms - (Date.now() - started);
+        if (left > 0) await wait(left); // pace even if the promise resolves before the flight ends
+        if (cancelled) return;
+        reportStep(i);
+      }
+      reportStep(-1);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [status, walkKey]);
 
   if (!matterportAvailable(modelId)) return null;
   return (

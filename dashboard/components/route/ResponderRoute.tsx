@@ -22,6 +22,9 @@ const MatterportTwin = dynamic(
 );
 
 const PERSON_TAG = { r: 0.94, g: 0.27, b: 0.27 };
+/** "Walk it" speeds, meters per second: the census walking speed (WALK_SPEED_MPS) and a slower one. */
+const WALK_MPS = 1.4;
+const WALK_SLOW_MPS = 0.8;
 const START_TAG = { r: 0.36, g: 0.78, b: 1 };
 
 /** A stable small number for a path, so the first fly to a new leg has its own key. */
@@ -181,12 +184,28 @@ export function ResponderRoute({
     const j = Math.max(0, Math.min(plan.path.length - 1, i));
     setNav((n) => ({ plan: planKey, step: j, fly: { path: [plan.path[j]], key: -(n.seq + 1) }, seq: n.seq + 1 }));
   };
+  // "Walk it": a paced walk in 3D along the rest of the leg, at a real walking speed, facing the way
+  // it goes (MatterportTwin `walk`). The point counter and the plan advance as each point is reached.
+  const [pace, setPace] = useState<"walk" | "slow">("walk");
+  const [walking, setWalking] = useState<{ path: string[]; key: number; mps: number; base: number; plan: string } | null>(null);
+  const walkingNow = walking !== null && walking.plan === planKey;
   const walkAll = () => {
     if (plan.path.length < 2) return;
     setFollowing(false);
     const from0 = step >= plan.path.length - 1 ? 0 : step;
-    const last = plan.path.length - 1;
-    setNav((n) => ({ plan: planKey, step: last, fly: { path: plan.path.slice(from0), key: -(n.seq + 1) }, seq: n.seq + 1 }));
+    setWalking({ path: plan.path.slice(from0), key: Date.now(), mps: pace === "slow" ? WALK_SLOW_MPS : WALK_MPS, base: from0, plan: planKey });
+  };
+  const stopWalk = () => setWalking(null);
+  const onWalkStep = (i: number) => {
+    const w = walking;
+    if (!w || w.plan !== planKey) return;
+    if (i < 0) {
+      setWalking(null);
+      return;
+    }
+    const idx = Math.min(plan.path.length - 1, w.base + i);
+    // Move the counter and the plan only; the 3D view is already walking there.
+    setNav((n) => ({ plan: planKey, step: idx, fly: n.plan === planKey ? n.fly : null, seq: n.seq }));
   };
 
   const has3d = matterportAvailable(data.building?.matterport_model_id);
@@ -272,6 +291,8 @@ export function ResponderRoute({
               nodes={data.nodes}
               flyPath={fly?.path ?? null}
               flyKey={fly?.key ?? null}
+              walk={walkingNow ? { path: walking.path, key: walking.key, mps: walking.mps } : null}
+              onWalkStep={onWalkStep}
               extraTags={extraTags}
               height="min(55dvh, 640px)"
             />
@@ -325,16 +346,36 @@ export function ResponderRoute({
             {atEnd && <span className="font-semibold text-ok">{leg === "to_aed" ? "The AED is here" : "The person is here"}</span>}
           </div>
           <div className="grid grid-cols-3 gap-2">
-            <Button size="lg" onClick={() => goTo(step - 1)} disabled={step === 0}>
+            <Button size="lg" onClick={() => goTo(step - 1)} disabled={step === 0 || walkingNow}>
               Back
             </Button>
-            <Button size="lg" tone="primary" onClick={() => goTo(step + 1)} disabled={atEnd}>
+            <Button size="lg" tone="primary" onClick={() => goTo(step + 1)} disabled={atEnd || walkingNow}>
               Next
             </Button>
-            <Button size="lg" onClick={walkAll} disabled={plan.path.length < 2}>
-              {atEnd ? "Replay" : "Walk it"}
-            </Button>
+            {walkingNow ? (
+              <Button size="lg" tone="danger" onClick={stopWalk}>
+                Stop
+              </Button>
+            ) : (
+              <Button size="lg" onClick={walkAll} disabled={plan.path.length < 2}>
+                {atEnd ? "Walk again" : "Walk it"}
+              </Button>
+            )}
           </div>
+          {show3d && (
+            <div className="flex items-center justify-between gap-2 text-sm text-muted">
+              <span>{walkingNow ? "Walking the route at walking pace." : "Walk it moves the view along the route at walking pace."}</span>
+              <Segmented
+                size="sm"
+                value={pace}
+                onChange={setPace}
+                options={[
+                  { value: "walk", label: "Normal" },
+                  { value: "slow", label: "Slow" },
+                ]}
+              />
+            </div>
+          )}
           {leg === "to_aed" && runner && personSweep && (
             <Button size="lg" tone="ok" onClick={() => setLegOverride("to_person")}>
               I have the AED: show the way to the person
