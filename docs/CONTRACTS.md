@@ -74,6 +74,8 @@ Rules:
 
 Published tables (spec §7): `agent_events`, `runs`, `building_scores`, `incidents`, `incident_events`, `dispatches`, `responders`.
 
+Broadcast channel (no table): `follow:<dispatch id>`, event `pos`, payload `{x: number, z: number, leg: "to_aed" | "to_person" | "with_person" | null}` (plan meters, the twin_nodes x and z). Sent by the responder app's floor plan as the helper dot moves; read by the dashboard's responder route page (`/building/[id]/route?follow=<dispatch id>`) to move the 3D view. Added 2026-11-15.
+
 ### `agent_events` (census console)
 
 `agent` is one of `planner|records|scanner|mapper|outside|fixer`. `kind` and `payload`:

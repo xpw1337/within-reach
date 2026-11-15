@@ -10,7 +10,7 @@ function one(v: string | string[] | undefined): string | null {
 }
 
 /**
- * A responder's route in 3D: /building/{id}/route?camera=&leg=to_aed|to_person&from=<sweep>&role=&geo=<calibration>
+ * A responder's route in 3D: /building/{id}/route?camera=&leg=to_aed|to_person&from=<sweep>&role=&geo=<calibration>&follow=<dispatch id>
  * (opened from "View route in 3D" in the responder app).
  */
 export default function ResponderRoutePage({ params, searchParams }: PageProps<"/building/[id]/route">) {
@@ -30,6 +30,7 @@ export default function ResponderRoutePage({ params, searchParams }: PageProps<"
           from={cleanSweepId(sp.from)}
           role={one(sp.role)}
           geo={parseGeoParam(sp.geo)}
+          followId={cleanSweepId(sp.follow)}
         />
       ))}
     </Suspense>

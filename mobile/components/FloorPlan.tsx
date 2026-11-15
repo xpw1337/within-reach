@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View, type GestureResponderEvent, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, G, Line, Polyline, Rect, Text as SvgText } from 'react-native-svg';
 
@@ -186,6 +186,11 @@ type WalkingProps = Omit<PlanProps, 'helper' | 'activeRoute' | 'positionLines' |
    * or "Start position set by you". Null for the simulated start.
    */
   startNote?: string | null;
+  /**
+   * Called as the helper dot moves (at most every 500 ms, and only after it moved 0.3 m), so the 3D
+   * route page can follow the walk (app/alert/[dispatchId].tsx sends it over Realtime).
+   */
+  onHelperMove?: (p: PlanPoint) => void;
 };
 
 /**
@@ -193,10 +198,25 @@ type WalkingProps = Omit<PlanProps, 'helper' | 'activeRoute' | 'positionLines' |
  * first point (which is how a button press snaps the dot to the AED or the person), and the step
  * tracking or timer fallback is decided again for the new leg.
  */
-export function WalkingFloorPlan({ walkRoute, standAt, startNote, ...rest }: WalkingProps) {
+export function WalkingFloorPlan({ walkRoute, standAt, startNote, onHelperMove, ...rest }: WalkingProps) {
   const length = walkRoute ? polylineLength(walkRoute) : 0;
   const walk = useStepWalk(length);
   const helper = walkRoute && walkRoute.length > 0 ? pointAlong(walkRoute, walk.walked) : standAt;
+  const onMove = useRef(onHelperMove);
+  const last = useRef<{ p: PlanPoint; at: number } | null>(null);
+  useEffect(() => {
+    onMove.current = onHelperMove;
+  }, [onHelperMove]);
+  const hx = helper ? Math.round(helper.x * 10) / 10 : null;
+  const hz = helper ? Math.round(helper.z * 10) / 10 : null;
+  useEffect(() => {
+    if (hx === null || hz === null || !onMove.current) return;
+    const t = Date.now();
+    const prev = last.current;
+    if (prev && (t - prev.at < 500 || Math.hypot(prev.p.x - hx, prev.p.z - hz) < 0.3)) return;
+    last.current = { p: { x: hx, z: hz }, at: t };
+    onMove.current({ x: hx, z: hz });
+  }, [hx, hz]);
   // Simulated start: one line, as before. A GPS or tapped start: the start line, then a movement line
   // worded as movement, so a real start never reads as "simulated" and a timed walk never reads as GPS.
   const lines: string[] = [];

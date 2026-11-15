@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FloorHeatmap } from "@/components/building/FloorHeatmap";
 import { matterportAvailable } from "@/components/building/MatterportTwin";
 import { Button, EmptyState, Segmented } from "@/components/ui";
@@ -14,6 +14,7 @@ import { useThresholds } from "@/lib/hooks/useThresholds";
 import { routeEndsAtSimulated } from "@/lib/incident";
 import { planLeg, spokenMeters, type Leg } from "@/lib/routePlan";
 import { isSimulated, type CameraRoute } from "@/lib/rows";
+import { getSupabase } from "@/lib/supabase";
 
 const MatterportTwin = dynamic(
   () => import("@/components/building/MatterportTwin").then((m) => m.MatterportTwin),
@@ -33,9 +34,11 @@ function hashKey(text: string): number {
 /**
  * The responder's route in the 3D twin, opened from "View route in 3D" in the app
  * (mobile/app/alert/[dispatchId].tsx). One leg at a time: to the AED, then to the person.
- * The view moves one scan point at a time with Back / Next, or walks the whole leg. With the
- * building's calibration in the link (`geo`), it follows the helper: each GPS update moves the view
- * to the route's scan point nearest to the phone (team lead, 2026-11-15: treat GPS as accurate).
+ * The view moves one scan point at a time with Back / Next, or walks the whole leg. It follows the
+ * helper as they walk: with `follow` (the dispatch id) the app sends its floor-plan dot over a Realtime
+ * broadcast channel (step tracking), and the view moves to the route's scan point nearest the dot,
+ * switching legs with the app. Until a dot arrives, and with the building's calibration in the link
+ * (`geo`), the phone's GPS drives it instead (team lead, 2026-11-15: treat GPS as accurate).
  */
 export function ResponderRoute({
   buildingId,
@@ -44,6 +47,7 @@ export function ResponderRoute({
   from,
   role,
   geo,
+  followId,
 }: {
   buildingId: string;
   cameraId: string | null;
@@ -51,6 +55,7 @@ export function ResponderRoute({
   from: string | null;
   role: string | null;
   geo: GeorefTransform | null;
+  followId: string | null;
 }) {
   const valid = UUID_RE.test(buildingId);
   const data = useBuilding(valid ? buildingId : "");
@@ -106,10 +111,12 @@ export function ResponderRoute({
   // Follow the phone: on by default when the link carries the calibration; Back / Next pause it.
   const [following, setFollowing] = useState(true);
   const [gps, setGps] = useState<"on" | "denied" | "error" | null>(null);
+  // True once the app's dot arrives; then it drives the view and GPS is not used.
+  const [streaming, setStreaming] = useState(false);
   const byId = useMemo(() => new Map(data.nodes.map((n) => [n.sweep_id, n])), [data.nodes]);
   const geoKey = geo ? `${geo.originLat},${geo.originLng},${geo.rotationDeg},${geo.tx},${geo.tz}` : "";
   useEffect(() => {
-    if (!geo || !following || !planKey || typeof navigator === "undefined" || !navigator.geolocation) return;
+    if (!geo || !following || streaming || !planKey || typeof navigator === "undefined" || !navigator.geolocation) return;
     const path = planKey.split(">");
     const watch = navigator.geolocation.watchPosition(
       (pos) => {
@@ -128,7 +135,44 @@ export function ResponderRoute({
     );
     return () => navigator.geolocation.clearWatch(watch);
     // geoKey stands for geo; planKey for the path.
-  }, [geoKey, following, planKey, byId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [geoKey, following, streaming, planKey, byId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The app's dot. The channel stays open for the whole page; the handler reads the current leg and
+  // path from refs so a leg change does not resubscribe.
+  const live = useRef({ planKey, leg, following });
+  useEffect(() => {
+    live.current = { planKey, leg, following };
+  }, [planKey, leg, following]);
+  useEffect(() => {
+    const db = getSupabase();
+    if (!db || !followId) return;
+    const channel = db
+      .channel(`follow:${followId}`)
+      .on("broadcast", { event: "pos" }, ({ payload }) => {
+        const msg = payload as { x?: unknown; z?: unknown; leg?: unknown };
+        if (typeof msg.x !== "number" || typeof msg.z !== "number") return;
+        setStreaming(true);
+        const cur = live.current;
+        if ((msg.leg === "to_aed" || msg.leg === "to_person") && msg.leg !== cur.leg) {
+          setLegOverride(msg.leg); // the app moved on (for example "I have the AED"); the next dot moves the view
+          return;
+        }
+        if (!cur.following || !cur.planKey) return;
+        const path = cur.planKey.split(">");
+        const p = { x: msg.x, z: msg.z };
+        const key = cur.planKey;
+        setNav((n) => {
+          const at = n.plan === key ? n.step : 0;
+          const i = nearestPathIndex(path, byId, p);
+          if (i < 0 || i === at || distanceToPathPoint(path, byId, i, p) + 1 > distanceToPathPoint(path, byId, at, p)) return n;
+          return { plan: key, step: i, fly: { path: [path[i]], key: -(n.seq + 1) }, seq: n.seq + 1 };
+        });
+      })
+      .subscribe();
+    return () => {
+      void db.removeChannel(channel);
+    };
+  }, [followId, byId]);
 
   const goTo = (i: number) => {
     setFollowing(false);
@@ -248,12 +292,16 @@ export function ResponderRoute({
             <EmptyState title="--">No scan graph for this building.</EmptyState>
           )}
 
-          {geo && (
+          {(geo || followId) && (
             <div className="flex items-center justify-between gap-2 text-sm">
               <span className={gps === "denied" || gps === "error" ? "text-warn" : "text-muted"}>
                 {!following
                   ? "Not following your location."
-                  : gps === "on"
+                  : streaming
+                    ? "Following your walk in the app: the view moves as you walk."
+                    : !geo
+                      ? "Waiting for your walk in the app."
+                      : gps === "on"
                     ? "Following your location: the view moves as you walk."
                     : gps === "denied"
                       ? "Location is off for this page. Allow it to follow you, or use Back and Next."

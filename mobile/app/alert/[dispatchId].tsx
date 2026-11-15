@@ -1,6 +1,7 @@
 import * as WebBrowser from 'expo-web-browser';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { FloorPlan, WalkingFloorPlan } from '../../components/FloorPlan';
@@ -51,12 +52,12 @@ import {
   STEP_WITH_PERSON,
 } from '../../lib/copy';
 import { env } from '../../lib/env';
-import { buildAlertPlan, legFromStart, reachableFrom } from '../../lib/floorPlan';
+import { buildAlertPlan, legFromStart, reachableFrom, type PlanPoint } from '../../lib/floorPlan';
 import { latLngToPlan, nearestNode } from '../../lib/georef';
 import { freshFix, loadActiveGeoref, type ActiveGeoref } from '../../lib/georefStore';
 import { distanceMeters, useLocationState } from '../../lib/location';
 import { useProfile } from '../../lib/profile';
-import { errorMessage } from '../../lib/supabase';
+import { errorMessage, supabase } from '../../lib/supabase';
 import { adoptDispatch, closeAlert, patchDispatch, secondsLeft, useAlertState } from '../../lib/useDispatches';
 import { useHelperStart } from '../../lib/useHelperStart';
 
@@ -89,6 +90,20 @@ export default function AlertScreen() {
   const [hasAed, setHasAed] = useState(false);
   // True while "View route in 3D" reads a GPS fix to start the 3D walk where the phone is.
   const [locating3d, setLocating3d] = useState(false);
+  // The 3D route page follows this helper's dot: positions go out on a Realtime broadcast channel
+  // named after the dispatch (no table writes); the page subscribes with `follow=<dispatch id>`.
+  const followChannel = useRef<RealtimeChannel | null>(null);
+  useEffect(() => {
+    const sb = supabase;
+    if (!sb || !dispatchId) return;
+    const ch = sb.channel(`follow:${dispatchId}`);
+    ch.subscribe();
+    followChannel.current = ch;
+    return () => {
+      followChannel.current = null;
+      void sb.removeChannel(ch);
+    };
+  }, [dispatchId]);
   /** Set by "I'm with the person" right away, before (and whether or not) the server answers. */
   const [withPerson, setWithPerson] = useState(false);
 
@@ -260,13 +275,18 @@ export default function AlertScreen() {
       calibration
         ? `geo=${[calibration.originLat, calibration.originLng, calibration.rotationDeg, calibration.tx, calibration.tz].join(',')}`
         : null,
+      `follow=${encodeURIComponent(d.id)}`,
     ]
       .filter(Boolean)
       .join('&');
     return `${routeBase}${query ? `?${query}` : ''}`;
   };
+  const sendHelperPos = (p: PlanPoint) => {
+    void followChannel.current?.send({ type: 'broadcast', event: 'pos', payload: { x: p.x, z: p.z, leg } });
+  };
   const open3d = async () => {
-    let from = startSweep;
+    // The dot's own start once the plan has one (GPS, tap, or the simulated start), so 2D and 3D agree.
+    let from = startSweep ?? (helperStart.start.phase === 'done' ? (plan?.defaultStartId ?? null) : null);
     if (!from && fromApplies && plan && calibration && location.status === 'watching') {
       setLocating3d(true);
       const goal = leg === 'to_person' || d.role === 'patient' || !plan.aedId ? plan.personId : plan.aedId;
@@ -336,13 +356,18 @@ export default function AlertScreen() {
           standAt={null}
           laterRoute={target === 'aed' ? plan.aedToPerson : null}
           startNote={startNote}
+          onHelperMove={sendHelperPos}
         />
       );
     } else if (leg === 'to_person') {
       // AED runner, second leg: AED -> person, unchanged.
-      planView = <WalkingFloorPlan key="aed_to_person" {...common} walkRoute={plan.aedToPerson} standAt={null} laterRoute={null} />;
+      planView = (
+        <WalkingFloorPlan key="aed_to_person" {...common} walkRoute={plan.aedToPerson} standAt={null} laterRoute={null} onHelperMove={sendHelperPos} />
+      );
     } else {
-      planView = <WalkingFloorPlan key="with_person" {...common} walkRoute={null} standAt={plan.person} laterRoute={null} />;
+      planView = (
+        <WalkingFloorPlan key="with_person" {...common} walkRoute={null} standAt={plan.person} laterRoute={null} onHelperMove={sendHelperPos} />
+      );
     }
   }
 

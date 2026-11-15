@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { reachableFrom, type AlertPlan, type PlanPoint } from './floorPlan';
-import { judgeStartFix, nearestNode, type GeorefTransform } from './georef';
+import { latLngToPlan, nearestNode, type GeorefTransform } from './georef';
 import { freshFix } from './georefStore';
 
 /**
@@ -71,10 +71,14 @@ export function useHelperStart({ plan, firstLeg, target, georef, georefReady, lo
     const reachable = reachableFrom(plan.graph, targetId);
     void freshFix().then((fix) => {
       if (!mounted.current) return;
-      const verdict = fix ? judgeStartFix(georef, fix, [...plan.graph.nodes.values()], (id) => reachable.has(id)) : null;
+      // GPS is taken as accurate (team lead, 2026-11-15): any fix snaps to the nearest scan point that
+      // can reach the leg's target, with no accuracy or distance limit. No fix at all: ask for a tap.
+      const snap = fix
+        ? nearestNode([...plan.graph.nodes.values()].filter((n) => reachable.has(n.id)), latLngToPlan(georef, fix))
+        : null;
       setStart((s) => {
         if (s.phase !== 'locating') return s;
-        return verdict?.ok ? { phase: 'done', source: 'gps', sweepId: verdict.sweepId, accuracyM: verdict.accuracyM } : { phase: 'tap' };
+        return snap && fix ? { phase: 'done', source: 'gps', sweepId: snap.node.id, accuracyM: fix.accuracyM } : { phase: 'tap' };
       });
     });
   }, [firstLeg, plan, targetId, georef, georefReady, locationGranted]);
