@@ -39,6 +39,8 @@ export default function RootLayout() {
           <Stack.Screen name="alert/[dispatchId]" options={{ gestureEnabled: false }} />
           <Stack.Screen name="released" options={{ gestureEnabled: false }} />
           <Stack.Screen name="cpr" />
+          <Stack.Screen name="aed-help" />
+          <Stack.Screen name="calibrate" />
         </Stack.Protected>
         <Stack.Screen name="onboarding" />
       </Stack>

@@ -43,7 +43,13 @@
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Used to move your position on the indoor map as you walk during an emergency response."
+        }
+      ]
     ]
   }
 }

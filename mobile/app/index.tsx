@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Linking } from 'react-native';
+import { Linking, Pressable } from 'react-native';
 
 import { Body, Button, Card, Label, Notice, Screen, Title, ToggleRow } from '../components/ui';
 import { CONSENT_LOCATION_HELP, PRIVACY_LINE, RESPONDER_ROLE_LABELS } from '../lib/copy';
@@ -54,7 +54,10 @@ export default function Home() {
 
   return (
     <Screen>
-      <Title>Within Reach</Title>
+      {/* A long press on the title opens the hidden georeference calibration screen (team setup only). */}
+      <Pressable onLongPress={() => router.push('/calibrate')} delayLongPress={1200} accessible={false}>
+        <Title>Within Reach</Title>
+      </Pressable>
 
       {missing.length > 0 ? <Notice tone="error">Missing settings in this build: {missing.join(', ')}.</Notice> : null}
 
