@@ -37,19 +37,13 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Within Reach uses your location while the app is open to alert you to emergencies nearby.",
+          "locationWhenInUsePermission": "Within Reach uses your location while the app is open so it can alert you to emergencies nearby and walk you there.",
           "locationAlwaysAndWhenInUsePermission": false,
           "isIosBackgroundLocationEnabled": false,
           "isAndroidBackgroundLocationEnabled": false
         }
       ],
-      "expo-web-browser",
-      [
-        "expo-sensors",
-        {
-          "motionPermission": "Used to move your position on the indoor map as you walk during an emergency response."
-        }
-      ]
+      "expo-font"
     ]
   }
 }

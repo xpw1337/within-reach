@@ -2,8 +2,8 @@ import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, space } from '../components/theme';
-import { Body, Button, Screen, Title } from '../components/ui';
+import { colors, font, space } from '../components/theme';
+import { Body, Button, Progress, Screen, Title } from '../components/ui';
 import {
   AED_HELP_BACK,
   AED_HELP_NEXT,
@@ -43,41 +43,44 @@ export default function AedHelp() {
 
   return (
     <Screen>
+      <View style={styles.top}>
+        <View style={styles.flex}>
+          <Progress value={(step + 1) / total} color={colors.green} />
+        </View>
+        <Text style={styles.counter}>{AED_HELP_STEP_OF(step + 1, total)}</Text>
+      </View>
       <Title>{AED_HELP_TITLE}</Title>
       <Body muted>{AED_HELP_NOTE}</Body>
 
-      <Text style={styles.counter}>{AED_HELP_STEP_OF(step + 1, total)}</Text>
       <View style={styles.stepBox} accessibilityLiveRegion="polite">
         <Text style={styles.stepText}>{text}</Text>
       </View>
 
-      <Button title={AED_HELP_REPEAT} kind="secondary" big onPress={() => void say(text)} />
       <View style={styles.row}>
         <View style={styles.flex}>
-          <Button title={AED_HELP_BACK} kind="secondary" big disabled={step === 0} onPress={() => setStep((s) => Math.max(0, s - 1))} />
+          <Button title={AED_HELP_BACK} kind="secondary" disabled={step === 0} onPress={() => setStep((s) => Math.max(0, s - 1))} />
         </View>
         <View style={styles.flex}>
-          <Button title={AED_HELP_NEXT} kind="primary" big disabled={step >= total - 1} onPress={() => setStep((s) => Math.min(total - 1, s + 1))} />
+          <Button title={AED_HELP_NEXT} kind="green" disabled={step >= total - 1} onPress={() => setStep((s) => Math.min(total - 1, s + 1))} />
         </View>
       </View>
-
-      <Button title={CPR_GUIDE} kind="secondary" onPress={openCpr} />
+      <Button title={AED_HELP_REPEAT} kind="secondary" icon="refresh" onPress={() => void say(text)} />
+      <Button title={CPR_GUIDE} kind="ghost" onPress={openCpr} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  counter: { fontSize: 16, fontWeight: '700', color: colors.muted, textAlign: 'center' },
+  top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  counter: { fontFamily: font.heavy, fontSize: 14, color: colors.muted },
   stepBox: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
-    borderWidth: 2,
-    borderColor: colors.ok,
+    backgroundColor: colors.greenSoft,
+    borderRadius: 22,
     padding: space.xl,
-    minHeight: 220,
+    minHeight: 240,
     justifyContent: 'center',
   },
-  stepText: { fontSize: 30, lineHeight: 40, fontWeight: '800', color: colors.text },
+  stepText: { fontFamily: font.heavy, fontSize: 28, lineHeight: 36, color: colors.ink },
   row: { flexDirection: 'row', gap: space.md },
   flex: { flex: 1 },
 });

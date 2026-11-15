@@ -1,112 +1,77 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 
-import { colors, space } from '../components/theme';
-import { Body, Button, Card, Label, Screen, Title } from '../components/ui';
-import { openAedHelp } from '../lib/aedHelp';
-import { AED_HELP_BUTTON, AED_STEP, CPR_CHECK, CPR_DEPTH_RATE, MOD_BREATHING, MOD_SEIZURE } from '../lib/copy';
+import { colors, font, space, type } from '../components/theme';
+import { Button, Card, Row, Screen } from '../components/ui';
+import { AED_HELP_BUTTON, AED_STEP, CPR_CHECK, CPR_DEPTH_RATE, MOD_BREATHING } from '../lib/copy';
 import { METRONOME_BPM, useMetronome } from '../lib/metronome';
-import { useProfile } from '../lib/profile';
-import { supabase } from '../lib/supabase';
-import { closeAlert } from '../lib/useDispatches';
 
 export default function CprGuide() {
-  const { incidentId, live } = useLocalSearchParams<{ incidentId?: string; live?: string }>();
-  const { profile } = useProfile();
+  const { live } = useLocalSearchParams<{ live?: string }>();
   const metronome = useMetronome();
   const { start } = metronome;
-  const [modifiers, setModifiers] = useState<string[]>([]);
   const [pulse] = useState(() => new Animated.Value(1));
 
-  // Arriving from an alert: start the metronome right away.
+  // Opened at the person: start the beat right away.
   useEffect(() => {
     if (live === '1') start();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live]);
 
-  // Show the spec's modifier lines only when this incident has those modifiers.
-  useEffect(() => {
-    if (!incidentId || !supabase) return;
-    let cancelled = false;
-    supabase
-      .from('incidents')
-      .select('modifiers')
-      .eq('id', incidentId)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!cancelled) setModifiers(((data as { modifiers: string[] | null } | null)?.modifiers ?? []) as string[]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [incidentId]);
-
   useEffect(() => {
     if (metronome.beat === 0) return;
-    pulse.setValue(1.18);
-    Animated.timing(pulse, { toValue: 1, duration: 220, useNativeDriver: true }).start();
+    pulse.setValue(1.14);
+    Animated.timing(pulse, { toValue: 1, duration: 240, useNativeDriver: true }).start();
   }, [metronome.beat, pulse]);
 
   return (
     <Screen>
-      <Title>CPR guide</Title>
-
+      <Text style={type.title}>CPR</Text>
       <View style={styles.center}>
         <Animated.View style={[styles.beat, metronome.running && styles.beatOn, { transform: [{ scale: pulse }] }]}>
+          <Ionicons name="heart" size={44} color={colors.white} />
           <Text style={styles.beatText}>{METRONOME_BPM}</Text>
-          <Text style={styles.beatUnit}>per minute</Text>
+          <Text style={styles.beatUnit}>pushes a minute</Text>
         </Animated.View>
       </View>
       <Button
-        title={metronome.running ? 'Stop metronome' : 'Start metronome'}
+        title={metronome.running ? 'Stop the beat' : 'Start the beat'}
         kind={metronome.running ? 'secondary' : 'primary'}
-        big
+        icon={metronome.running ? 'stop' : 'play'}
         onPress={metronome.running ? metronome.stop : metronome.start}
       />
-
       <Card>
-        <Label>Check and start</Label>
-        <Body>{CPR_CHECK}</Body>
+        <Row icon="hand-left" title="Check and start" />
+        <Text style={type.body}>{CPR_CHECK}</Text>
       </Card>
       <Card>
-        <Label>Push</Label>
-        <Body>{CPR_DEPTH_RATE}</Body>
+        <Row icon="arrow-down" title="Push" />
+        <Text style={type.body}>{CPR_DEPTH_RATE}</Text>
       </Card>
       <Card>
-        <Label>AED</Label>
-        <Body>{AED_STEP}</Body>
-        {/* The CPR guide is only reached at the person (or from Home to practice), so AED help is always offered. */}
+        <Row icon="leaf" tint={colors.blue} title="If they're breathing" />
+        <Text style={type.body}>{MOD_BREATHING}</Text>
+      </Card>
+      <Card tone="green">
+        <Row icon="flash" tint={colors.greenDark} title="AED" />
+        <Text style={type.body}>{AED_STEP}</Text>
         <Button
           title={AED_HELP_BUTTON}
-          big
+          kind="green"
           onPress={() => {
-            // The metronome would talk over the spoken AED steps; the AED help screen links back here.
-            metronome.stop();
-            openAedHelp(incidentId, profile?.id, 'cpr');
+            metronome.stop(); // it would talk over the spoken AED steps
+            router.push('/aed-help');
           }}
         />
       </Card>
-      {modifiers.includes('breathing') ? (
-        <Card>
-          <Label>Breathing</Label>
-          <Body>{MOD_BREATHING}</Body>
-        </Card>
-      ) : null}
-      {modifiers.includes('seizure') ? (
-        <Card>
-          <Label>Shaking</Label>
-          <Body>{MOD_SEIZURE}</Body>
-        </Card>
-      ) : null}
-
       <Button
-        title="Done"
-        kind="secondary"
+        title="Back"
+        kind="ghost"
         onPress={() => {
           metronome.stop();
-          if (live === '1') closeAlert();
-          if (router.canDismiss()) router.dismissTo('/');
+          if (router.canGoBack()) router.back();
           else router.replace('/');
         }}
       />
@@ -117,14 +82,10 @@ export default function CprGuide() {
 const styles = StyleSheet.create({
   center: { alignItems: 'center', paddingVertical: space.md },
   beat: {
-    width: 168,
-    height: 168,
-    borderRadius: 84,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.muted,
+    width: 190, height: 190, borderRadius: 95, alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.faint, borderBottomWidth: 6, borderBottomColor: 'rgba(0,0,0,0.15)',
   },
-  beatOn: { backgroundColor: colors.primary },
-  beatText: { fontSize: 52, fontWeight: '800', color: colors.primaryText, fontVariant: ['tabular-nums'] },
-  beatUnit: { fontSize: 15, color: colors.primaryText },
+  beatOn: { backgroundColor: colors.red },
+  beatText: { fontFamily: font.black, fontSize: 46, lineHeight: 50, color: colors.white, fontVariant: ['tabular-nums'] },
+  beatUnit: { fontFamily: font.bold, fontSize: 13, color: colors.white },
 });

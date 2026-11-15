@@ -3,19 +3,19 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
+    "@expo-google-fonts/nunito": "^0.4.2",
+    "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@supabase/supabase-js": "^2.119.0",
     "expo": "~58.0.25",
     "expo-audio": "~58.0.12",
     "expo-constants": "~58.0.16",
+    "expo-font": "~58.0.12",
     "expo-haptics": "~58.0.8",
     "expo-linking": "~58.0.17",
     "expo-location": "~58.0.22",
     "expo-router": "~58.0.31",
-    "expo-sensors": "~58.0.5",
     "expo-speech": "~58.0.4",
     "expo-status-bar": "~58.0.5",
-    "expo-web-browser": "~58.0.8",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "react-native": "0.88.1",
@@ -40,8 +40,7 @@
     "lint": "expo lint",
     "export:ios": "expo export --platform ios --output-dir dist-check/ios",
     "export:web": "expo export --platform web --output-dir dist-check/web",
-    "sounds": "python3 scripts/make_sounds.py",
-    "check:georef": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/check-georef.mjs"
+    "sounds": "python3 scripts/make_sounds.py"
   },
   "private": true
 }

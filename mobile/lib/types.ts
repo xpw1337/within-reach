@@ -1,115 +1,80 @@
-// Row shapes for the tables the app touches, copied from supabase/migrations/0001_init.sql.
-// Only the columns the app reads or writes are listed for the larger tables.
-// These are `type` aliases (not interfaces) so they satisfy supabase-js generic constraints.
+// Shapes sent by the agent over /sos/ws/phone (agent/sos/hub.py, phone_state).
 
-export type ResponderRole = 'public' | 'staff' | 'security' | 'tenant';
-export type DispatchChannel = 'app' | 'call' | 'speaker' | 'broadcast';
-export type DispatchStatus = 'sent' | 'accepted' | 'declined' | 'timeout' | 'released' | 'arrived';
-export type DispatchRole = 'patient' | 'aed_runner' | 'staff' | 'broadcast';
-export type IncidentType = 'cardiac' | 'fall' | 'fire' | 'unknown';
-export type IncidentStatus =
-  | 'detected'
-  | 'awaiting_confirm'
-  | 'voice_check'
-  | 'confirmed'
-  | 'responding'
-  | 'resolved'
-  | 'false_alarm';
+export type LatLng = { lat: number; lng: number };
 
-export type ResponderRow = {
-  id: string;
-  name: string;
-  phone: string;
-  callable: boolean;
-  cpr_trained: boolean;
-  role: ResponderRole;
-  building_id: string | null;
-  last_lat: number | null;
-  last_lng: number | null;
-  last_seen_at: string | null;
-  consent_location: boolean;
-  consent_calls: boolean;
-  on_duty: boolean;
+export type Step = { text: string; distance_m: number };
+
+export type LegKind = 'extinguisher' | 'aed' | 'person';
+
+export type Leg = {
+  kind: LegKind;
+  to: LatLng & { label?: string | null; id?: string | null; source?: string | null };
+  geometry: [number, number][];
+  distance_m: number;
+  duration_s: number;
+  steps: Step[];
+  bearing_deg: number;
+  source: 'valhalla' | 'direct';
+  avoids_fire?: boolean;
+  fire_on_route?: boolean;
 };
 
-export type DispatchRow = {
+export type Place = LatLng & {
   id: string;
-  incident_id: string | null;
-  responder_id: string | null;
-  channel: DispatchChannel | null;
-  role: DispatchRole | null;
-  wave: number | null;
-  status: DispatchStatus;
-  call_sid: string | null;
-  sent_at: string;
-  responded_at: string | null;
+  kind: 'aed' | 'extinguisher';
+  label: string;
+  source: string;
+  distance_m?: number;
 };
 
-export type IncidentRow = {
-  id: string;
-  type: IncidentType;
-  status: IncidentStatus;
-  camera_id: string | null;
-  building_id: string | null;
-  witnessed: boolean | null;
-  modifiers: string[] | null;
-  scene_safe: boolean | null;
-  hazards: string[] | null;
+export type Plan = {
+  from: [number, number];
+  legs: Leg[];
+  total_m: number;
+  total_s: number;
+  updated_at: number;
+  aed_too_far: Place | null;
+  no_extinguisher: boolean;
 };
 
-export type CameraRow = {
+export type Fire = LatLng & { active: boolean; radius_m: number; source: string; label: string };
+
+export type IncidentKind = 'fall' | 'fire';
+
+export type Offer = {
   id: string;
-  name: string | null;
-  building_id: string | null;
-  sweep_id: string | null;
-  floor: number | null;
-  landmark: string | null;
-  lat: number | null;
-  lng: number | null;
-};
-
-export type RouteTarget = 'aed' | 'naloxone' | 'exit' | 'extinguisher';
-
-export type CameraRouteRow = {
-  camera_id: string;
-  target: RouteTarget;
-  path: string[] | null;
+  incident_id: string;
+  kind: IncidentKind;
+  status: string;
+  sent_at: number;
+  expires_at: number;
   distance_m: number | null;
-  directions: string | null;
-  audio_url: string | null;
-};
-
-/** One scan position. Model space in meters, y up; floor plans are drawn from x and z. */
-export type TwinNodeRow = {
-  sweep_id: string;
-  floor: number | null;
-  x: number | null;
-  y: number | null;
-  z: number | null;
-  neighbors: string[] | null;
-};
-
-export type AssetSource = 'detected' | 'tag' | 'manual' | 'proposed';
-
-export type AssetRow = {
-  id: string;
-  type: string;
-  sweep_id: string | null;
-  floor: number | null;
-  label: string | null;
-  x: number | null;
-  z: number | null;
-  source: AssetSource | null;
-  flags: string[] | null;
-};
-
-export type BuildingRow = {
-  id: string;
-  /** Selected where the georeference defaults are looked up (lib/georefStore.ts); absent elsewhere. */
-  costar_property_id?: string | null;
-  name: string | null;
+  place: string | null;
   address: string | null;
-  city: string | null;
-  lat: number | null;
-  lng: number | null;
+  fire: boolean;
+  witnessed: boolean | null;
+  location: LatLng;
+};
+
+export type Mission = {
+  id: string;
+  kind: IncidentKind;
+  status: 'alerting' | 'en_route' | 'on_scene' | 'no_responders' | 'resolved';
+  location?: LatLng & { label?: string | null; accuracy_m?: number | null };
+  address?: string | null;
+  fire?: Fire | null;
+  plan?: Plan | null;
+  resources?: { aeds: Place[]; extinguishers: Place[]; status: string; error: string | null };
+  witnessed?: boolean | null;
+  vision?: Record<string, number>;
+  timeline?: { at: number; text: string; kind: string }[];
+  collected?: string[];
+};
+
+export type PhoneState = {
+  me: { id: string; name: string; on_duty: boolean; lat: number | null; lng: number | null; has_phone?: boolean; calls?: boolean } | null;
+  offer: Offer | null;
+  mission: Mission | null;
+  server_time: number;
+  accept_timeout_s: number;
 };
