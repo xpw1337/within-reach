@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -60,13 +61,27 @@ class PollyTTS:
 
 
 class MacSayTTS:
-    ext = "aiff"
+    """macOS ``say``. It writes AIFF, which the ``audio`` bucket refuses (MP3 only, migration 0003),
+    so the file is converted to MP3 with ffmpeg when it is installed; without ffmpeg it stays AIFF
+    (the laptop speaker plays it, only the upload is skipped)."""
+
+    def __init__(self) -> None:
+        self.ffmpeg = shutil.which("ffmpeg")
+        self.ext = "mp3" if self.ffmpeg else "aiff"
 
     def synthesize(self, text: str) -> bytes:
         with tempfile.TemporaryDirectory() as d:
             out = Path(d) / "out.aiff"
             subprocess.run(["say", "-o", str(out), text], check=True, capture_output=True)
-            return out.read_bytes()
+            if not self.ffmpeg:
+                return out.read_bytes()
+            mp3 = Path(d) / "out.mp3"
+            subprocess.run(
+                [self.ffmpeg, "-loglevel", "error", "-y", "-i", str(out), "-codec:a", "libmp3lame", "-q:a", "4", str(mp3)],
+                check=True,
+                capture_output=True,
+            )
+            return mp3.read_bytes()
 
 
 class FakeTTS:
