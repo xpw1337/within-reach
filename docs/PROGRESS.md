@@ -59,6 +59,10 @@ Teammate commits d18e318 to ad79cce (2026-11-14): Rabinowitz demo building throu
 
 Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec section 3 template adds it).
 
+Dashboard on Vercel, 2026-11-14: project `within-reach` on the team lead's Vercel account, production https://within-reach-nu.vercel.app (built from `dashboard/`, `vercel.json` sets the framework). Production env has only the three public values (Supabase URL, publishable key, Matterport SDK key); no `NEXT_PUBLIC_AGENT_URL` yet, so desk actions on the deployed `/live` need the tunnel first. `mobile/.env` points "View route in 3D" at it. The 3D view there fails with "Key/referrer mismatch" until `within-reach-nu.vercel.app` is added to the Matterport SDK key's allowed domains (team lead). Checked locally: the SDK loads the Rabinowitz model with the key on localhost in about 3 s, all 66 SDK sweep ids equal `twin_nodes.sweep_id`, and `Sweep.moveTo` works.
+
+Privacy, open: the publishable key can read every `responders` row including phone numbers (two real numbers on 2026-11-14), and the key ships in the app and the deployed dashboard. Fixing it is a policy change (needs the team lead's approval).
+
 ## Before going on stage
 
 - Which phone rings: staff are never called (they get the ungated staff alert and are left out of the waves), so the ringing responder phone must be a non-staff callable responder (teammate B, public). Waves are nearest first to the camera (e51ae85). With an AED route for the camera, the first accept is the AED runner and the second goes to the person; with no AED route the first accept goes to the person and there is no runner. Both moments on stage need two real phones that accept in that order.
