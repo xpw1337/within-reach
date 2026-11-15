@@ -4,11 +4,11 @@ Updated by the coordinator as lanes report. The source of truth for what is done
 
 ## Final status for Devpost (2026-11-15)
 
-Built and pushed on main: the census pipeline (runs on the fallback and demo buildings), the live response (webcam fall detection, voice check, nearest-first waves, AED runner and patient roles, staff alert, 911 briefing to the simulated dispatcher, handoff card), Photon iMessage alerts, the responder app (alerts, floor plan with GPS start and step tracking, 3D route link), the responder 3D route page (Matterport twin, follows the app's dot, "Walk it" at walking pace), and the dashboard (city map, building page, agent console, live desk). Look from the sos/dashboard-live-redesign and sos/phone-app branches folded in (theme, components, home screen, first-run onboarding) without their functional changes. Dashboard deployed at https://within-reach-nu.vercel.app.
+Built and pushed on main: the census pipeline (runs on the fallback and demo buildings), the live response (webcam fall detection, voice check, nearest-first waves, AED runner and patient roles, staff alert, 911 briefing to the simulated dispatcher, handoff card), Photon iMessage alerts, the responder app (alerts, floor plan with GPS start and step tracking, 3D route link), the responder 3D route page (Matterport twin, follows the app's dot, "Walk it" at walking pace), and the dashboard (city map, building page, console, live desk). Look from the sos/dashboard-live-redesign and sos/phone-app branches folded in (theme, components, home screen, first-run onboarding) without their functional changes. Dashboard deployed at https://within-reach-nu.vercel.app.
 
 Verified at the end: 460 Python tests, 66 dashboard tests, mobile typecheck; no keys or real phone numbers in tracked files. Real takes on 2026-11-15: alerts 5 to 6 s after detection, accepts 4 to 8 s after the alert.
 
-Not done: city-scale census (no CoStar dataset access), phone calls (no Twilio account), Claude or Bedrock keys, the publishable-key exposure of responder phone numbers (policy change not approved), and the functional SOS-hub branches (sos/agent-live-response, sos/vision-fall-fire) which were not merged.
+Not done: city-scale census (no CoStar dataset access), phone calls (no Twilio account), the publishable-key exposure of responder phone numbers (policy change not approved), and the functional SOS-hub branches (sos/agent-live-response, sos/vision-fall-fire) which were not merged.
 
 ## How to resume after an interruption
 
