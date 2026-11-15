@@ -353,6 +353,7 @@ def _on_milestone(state, sig) -> Transition:
         return _ignored(f"{kind} already recorded")
     updates: dict[str, Any] = {"milestones": {kind: sig["ts"]}}
     effects: list[dict[str, Any]] = []
+    # aed_picked_up and aed_help_started (from the app) are recorded only: no script switch.
     if kind in ("cpr_started", "aed_arrived"):
         timers, effects = _cancel(state, TIMER_ANNOUNCE)
         if timers:
@@ -376,13 +377,15 @@ def _on_accept(state, sig) -> Transition:
         return _ignored(f"dispatch is {status}")
     ts = sig["ts"]
     if d.get("role") == "staff":
-        # A staff alert is acknowledged; it does not take a responder role.
+        # A staff accept means "going to the person": acknowledged (status + timeline event), it
+        # does not take a helper role.
         return Transition(
             updates={"dispatches": [{"id": d["id"], "status": "accepted", "responded_at": ts}]},
             events=[_event(_responder_actor(d), "dispatch_accepted", dispatch_payload(d))],
         )
     roles = state.get("roles") or {}
-    role = None if state.get("playbook") == "unsafe" else open_role(roles)
+    routes = state.get("routes") or {}
+    role = None if state.get("playbook") == "unsafe" else open_role(roles, routes)
     if role is None:
         effects = []
         if d.get("call_sid"):
@@ -401,8 +404,8 @@ def _on_accept(state, sig) -> Transition:
     events = [_event(_responder_actor(d), "dispatch_accepted", dispatch_payload(d, role=role))]
     effects: list[dict[str, Any]] = []
     after = merge_state(state, updates)
-    if roles_filled(after.get("roles") or {}):
-        # Both roles taken: everyone else still pending is released and their calls hung up.
+    if roles_filled(after.get("roles") or {}, routes):
+        # Roles taken: every other helper still pending is released and their calls hung up.
         pending = merge_state(state, {"dispatches": updates["dispatches"]})
         wave_rows = [x for x in pending.get("dispatches") or [] if x.get("role") != "staff"]
         rows, rel_events, rel_effects = _release({"dispatches": wave_rows}, DISPATCH_OPEN)
@@ -572,7 +575,7 @@ def dispatch_due(state: Mapping[str, Any]) -> bool:
         return False
     if not gate_open(state):
         return False
-    if roles_filled(state.get("roles") or {}) or state.get("waves_exhausted"):
+    if roles_filled(state.get("roles") or {}, state.get("routes") or {}) or state.get("waves_exhausted"):
         return False
     sent = state.get("waves_sent") or 0
     closed = state.get("waves_closed") or 0

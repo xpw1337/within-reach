@@ -71,10 +71,20 @@ def test_can_call_needs_callable_and_consent():
     assert not rs.can_call(r("a", callable_=False, consent_calls=True))
 
 
-def test_roles_patient_then_aed_runner():
-    assert rs.open_role({}) == "patient"
-    assert rs.open_role({"patient": "x"}) == "aed_runner"
-    assert rs.open_role({"patient": "x", "aed_runner": "y"}) is None
+def test_roles_aed_runner_then_patient_when_an_aed_route_is_mapped():
+    routes = {"aed": {"distance_m": 14, "directions": "left"}}
+    assert rs.open_role({}, routes) == "aed_runner"
+    assert rs.open_role({"aed_runner": "x"}, routes) == "patient"
+    assert rs.open_role({"aed_runner": "x", "patient": "y"}, routes) is None
+    assert rs.roles_filled({"aed_runner": "x", "patient": "y"}, routes)
+    assert not rs.roles_filled({"aed_runner": "x"}, routes)
+
+
+def test_roles_patient_only_without_an_aed_route():
+    for routes in ({}, None, {"exit": {"distance_m": 5}}):
+        assert rs.open_role({}, routes) == "patient"
+        assert rs.open_role({"patient": "x"}, routes) is None
+        assert rs.roles_filled({"patient": "x"}, routes)
 
 
 def test_staff_alert_targets():

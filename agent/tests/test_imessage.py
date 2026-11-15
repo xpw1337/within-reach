@@ -68,6 +68,8 @@ async def test_alert_goes_with_the_app_alert_and_the_call(tmp_path):
         assert others and all(d["channel"] == "app" for d in others)  # not callable: no text either
         (alert,) = m.texts_to("+15550100001")
         assert "east elevators at Test Gym" in alert and "(14 meters, left of the elevators)" in alert
+        assert ("you will either get the AED (14 meters, left of the elevators) and bring it to the person, "
+                "or go to the person.") in alert
         assert "Reply 1 to help. Reply 2 if you can't." in alert
         # FakeTelephony does not ring: the briefing text goes out right after the call attempt
         (briefing,) = m.texts_to(SIM)
@@ -129,12 +131,14 @@ async def test_role_follow_up_and_stand_down(tmp_path):
         await rt.deliver(iid, {"kind": "accept", "source": "app", "dispatch_id": by["r1"]["id"]})
         await rt.deliver(iid, {"kind": "accept", "source": "twilio", "dispatch_id": by["r2"]["id"]})
         await rt.settle()
-        patient = m.texts_to("+15550100001")[-1]
-        assert patient.startswith("You are going to the person. Go to east elevators, floor 0, Test Gym, 1 Test St.")
-        assert patient.endswith("Reply HERE when you arrive.")
-        runner = m.texts_to("+15550100002")[-1]
-        assert runner.startswith("You are the AED runner. Get the AED: 14 meters, left of the elevators.")
+        runner = m.texts_to("+15550100001")[-1]  # first accept, AED route mapped: the AED runner
+        assert runner.startswith("You are the AED runner. First get the AED: 14 meters, left of the elevators. "
+                                 "Then bring it to the person at east elevators, floor 0, Test Gym, 1 Test St.")
         assert runner.endswith("Reply HERE when you arrive with the AED.")
+        patient = m.texts_to("+15550100002")[-1]
+        assert patient.startswith("You are going to the person. Go to east elevators, floor 0, Test Gym, 1 Test St. "
+                                  "Another responder is getting the AED.")
+        assert patient.endswith("Reply HERE when you arrive.")
         # r3 was texted the alert and is released once both roles are taken
         assert rt.store.dispatches[by["r3"]["id"]]["status"] == "released"
         assert m.texts_to("+15550100003")[-1] == ("Two responders are already on the way. "
@@ -267,12 +271,12 @@ async def test_reply_1_accepts_then_here_arrives_with_the_aed(hook):
     iid = await start(rt)
     await rt.clock.advance(10)
     by = {d["responder_id"]: d for d in wave(rt)}
-    await rt.deliver(iid, {"kind": "accept", "source": "app", "dispatch_id": by["r1"]["id"]})  # patient
-    r = await post_event(c, inbound("1", handle="+15550100002", event_id="evt_a"))
+    r = await post_event(c, inbound("1", handle="+15550100002", event_id="evt_a"))  # first accept
     assert r.json() == {"ok": True}
     await rt.settle()
     d2 = rt.store.dispatches[by["r2"]["id"]]
     assert d2["status"] == "accepted" and d2["role"] == "aed_runner"
+    await rt.deliver(iid, {"kind": "accept", "source": "app", "dispatch_id": by["r1"]["id"]})  # patient
     assert m.texts_to("+15550100002")[-1].startswith("You are the AED runner.")
     # Photon redelivers the same event: nothing happens twice
     r = await post_event(c, inbound("1", handle="+15550100002", event_id="evt_a"))
@@ -322,4 +326,4 @@ async def test_webhook_without_messaging_still_answers(tmp_path):
             r = await post_event(c, inbound("1"))
             assert r.json() == {"ok": True}
             await asyncio.sleep(0)
-            assert (await rt.get_state(iid))["roles"]["patient"] == "r1"
+            assert (await rt.get_state(iid))["roles"]["aed_runner"] == "r1"

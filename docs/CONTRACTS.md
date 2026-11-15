@@ -38,11 +38,11 @@ Everything here crosses a lane boundary. Change it only together with the lanes 
 | `POST /events` | `{camera_id, kind:"person_down"\|"responsive"\|"possible_seizure"\|"responder_arrived", victim_track_id:int, witnessed?:bool, ts, frame_jpeg_b64?:string}` (`witnessed` and `frame_jpeg_b64` on `person_down` only) | `{incident_id, status}` |
 | `POST /incidents/{id}/confirm` | `{decision:"confirm"\|"false_alarm", by:string}` | `{status}` |
 | `POST /incidents/{id}/cancel_911` | `{by:string}` | `{ok:true}` (FALL playbook only) |
-| `POST /incidents/{id}/milestone` | `{kind:"cpr_started"\|"aed_arrived"\|"responder_arrived", by?:string}` | `{ok:true}` |
+| `POST /incidents/{id}/milestone` | `{kind:"cpr_started"\|"aed_arrived"\|"responder_arrived"\|"aed_picked_up"\|"aed_help_started", by?:string}` | `{ok:true}` (any other `kind`: 422) |
 | `POST /incidents/{id}/resolve` | `{by:string}` | `{status:"resolved"}` |
-| `POST /dispatches/{id}/accept` | | `{role:"patient"\|"aed_runner"\|"staff", status:"accepted"}` or `{status:"released"}` if both roles are taken (`staff` for a staff-alert dispatch) |
+| `POST /dispatches/{id}/accept` | | `{role:"aed_runner"\|"patient"\|"staff", status:"accepted"\|"arrived"}` or `{status:"released"}` if the helper roles are already taken (`staff` for a staff-alert dispatch). A repeat returns the same answer. |
 | `POST /dispatches/{id}/decline` | | `{status:"declined"}` |
-| `POST /dispatches/{id}/arrived` | `{with_aed?:bool}` | `{status:"arrived"}` |
+| `POST /dispatches/{id}/arrived` | `{with_aed?:bool}` (body optional, default `false`) | `{status:"arrived"}`. `with_aed:true` also records `aed_arrived` (the speaker switches to `cardiac_aed_arrived`). |
 | `POST /twilio/voice/{dispatch_id}` | Twilio form | TwiML: situation, role, AED location, gather 1 digit |
 | `POST /twilio/gather/{dispatch_id}` | Twilio form (`Digits`) | TwiML; `1` = accept, `2` = decline |
 | `POST /twilio/briefing/{incident_id}` | Twilio form | TwiML: the 911 briefing, spoken twice |
@@ -56,6 +56,14 @@ Rules:
 - One open incident per camera. A second `person_down` from the same camera while one is open returns the existing `incident_id`.
 - `responsive`, `possible_seizure` and `responder_arrived` events for a camera with no open incident are ignored with `{incident_id:null, status:"ignored"}`.
 - Every command is idempotent: repeating it returns the current state, never an error.
+
+### Responder roles and order (team lead, 2026-11-14)
+
+- 2026-11-14: this replaces "first accept = patient, second = AED runner" (spec §9.10) by team lead decision.
+- Two pools. On-duty `staff` and `security` of the incident's building get the ungated staff alert: a `dispatches` row with `role='staff'`, `wave=0`. A staff accept keeps `role='staff'` and means "go to the person"; it sets `dispatches.status='accepted'` and emits `dispatch_accepted` (`role:"staff"`), and takes no helper role. Everyone else eligible (consent, on duty, seen in the last 10 minutes, inside the geofence) is the helper pool for the waves; the building's staff alert targets are never in a wave.
+- Helper roles. When the camera has an AED route (a `camera_routes` row with `target='aed'`), the first helper accept is `aed_runner` (get the AED, then bring it to the person) and the second is `patient` (go straight to the person). With no AED route, the first helper accept is `patient` and there is no AED runner. Once the roles are filled, every other open helper dispatch is `released`, its call is hung up, and later accepts answer `{status:"released"}`.
+- Order inside each pool: distance from the responder's `last_lat/last_lng` to the incident (the camera's `lat/lng`, else the building's), then CPR-trained first for cardiac, then responder id. A responder with no position sorts last. With no incident coordinates the earlier order is used: staff, security, tenants, then public; CPR-trained first for cardiac; then id. `WAVE_SIZE` helpers per wave; every on-duty staff member gets the staff alert.
+- App milestones: `aed_picked_up` (the AED runner tapped "I have the AED") and `aed_help_started` (the helper asked for spoken AED instructions) go through `POST /incidents/{id}/milestone`. Each is recorded once (a repeat is a no-op answering `{ok:true}`) as an `incident_events` row `kind='milestone'`, `actor='desk'`, payload `{kind, by}`. Nothing else changes: no speaker script switch, no `incidents` column. "I'm with the person" is `POST /dispatches/{id}/arrived` with `with_aed:true` for the AED runner.
 
 ### Photon 2.0 (approved 2026-11-14)
 
@@ -97,6 +105,7 @@ Payloads the frontends rely on:
 - `verify_result`: `{is_emergency, scene_safe, hazards[], modifiers[], error?}` (after the allowlist filter).
 - `dispatch_sent`, `dispatch_accepted`, `dispatch_declined`, `dispatch_timeout`, `dispatch_released`: `{dispatch_id, responder_id, role, wave, channel, call_sid?}`.
 - `timer_fired`: `{timer}`.
+- `milestone`: `{kind, by}`, `kind` one of `cpr_started`, `aed_arrived`, `responder_arrived`, `aed_picked_up`, `aed_help_started`.
 - `imessage_sent`: `{purpose, dispatch_id?, responder_id?, role?, message_id}`; `imessage_failed`: `{purpose, error, ...}`; `imessage_received`: `{reply, dispatch_id, responder_id}`. `purpose` is `alert`, `staff_alert`, `role`, `stand_down` or `briefing`. Timer names are the ones in `agent/DESIGN.md` (`voice_check`, `confirm_auto`, `found_down_escalate`, `wave_{n}`, `fall_911`, `announce_repeat`, `guide_tick`).
 
 Latency metrics on `/live` are computed from `incidents` timestamps only (`collapse_at`, `first_instruction_at`, `confirmed_at`, `ems_notified_at`, `first_accept_at`, ...). One exception: first ring is the earliest `dispatches.sent_at` for the incident with a non-null `call_sid` (the call is placed when the row is written); `agent/` sets `call_sid` on the dispatch row it calls.

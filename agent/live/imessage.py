@@ -29,7 +29,7 @@ from typing import Any
 from agent.io.telephony import EmergencyNumberError, TelephonyError
 from agent.live.briefing import TYPE_PHRASES
 from agent.live.playbooks import camera_context
-from agent.live.responders import ROLE_ORDER, roles_filled
+from agent.live.responders import HELPER_ROLES, aed_route_mapped, roles_filled
 from agent.live.state import merge_state
 
 log = logging.getLogger(__name__)
@@ -61,11 +61,19 @@ def aed_phrase(state: Mapping[str, Any]) -> str | None:
     return None
 
 
+def help_offer(state: Mapping[str, Any], aed: str | None, *, parens: bool) -> str:
+    """What a helper may be asked to do, in the role order (team lead, 2026-11-14): with an AED
+    route, the first to accept gets the AED and brings it, the next goes to the person."""
+    if not aed_route_mapped(state.get("routes")):
+        return "If you can help, you will go to the person."
+    where = (f" ({aed})" if parens else f", {aed},") if aed else ""
+    return f"If you can help, you will either get the AED{where} and bring it to the person, or go to the person."
+
+
 def alert_text(state: Mapping[str, Any]) -> str:
     aed = aed_phrase(state)
     return (f"Emergency alert from Within Reach. Someone has collapsed by {_where(state)}. "
-            "If you can help, you will either go to the person or bring the AED"
-            + (f" ({aed})." if aed else ".") + " Reply 1 to help. Reply 2 if you can't.")
+            + help_offer(state, aed, parens=True) + " Reply 1 to help. Reply 2 if you can't.")
 
 
 def staff_text(state: Mapping[str, Any]) -> str:
@@ -81,18 +89,27 @@ def role_text(role: str, state: Mapping[str, Any]) -> str:
     floor = (state.get("camera") or {}).get("floor")
     at = "".join([f", floor {floor}" if floor is not None else "", f", {place}" if place else ""])
     if role == "patient":
-        return (f"You are going to the person. Go to {landmark}{at}. Tap their shoulder and shout. "
+        runner = " Another responder is getting the AED." if (state.get("roles") or {}).get("aed_runner") else ""
+        return (f"You are going to the person. Go to {landmark}{at}.{runner} Tap their shoulder and shout. "
                 "If they don't respond and aren't breathing normally, call 911 on speaker and start CPR: "
                 "push hard and fast in the center of the chest. Reply HERE when you arrive.")
     aed = aed_phrase(state)
-    get = f"Get the AED: {aed}." if aed else "Get the AED."
-    return (f"You are the AED runner. {get} Then bring it to {landmark}{at}. "
+    get = f"First get the AED: {aed}." if aed else "First get the AED."
+    return (f"You are the AED runner. {get} Then bring it to the person at {landmark}{at}. "
             "Reply HERE when you arrive with the AED.")
 
 
+def on_the_way_text(state_after: Mapping[str, Any]) -> str:
+    """Stand-down wording once the helper roles are filled (one role without an AED route)."""
+    n = len([r for r in HELPER_ROLES if (state_after.get("roles") or {}).get(r)])
+    who = "Two responders are" if n >= 2 else "A responder is"
+    return f"{who} already on the way. Thank you, you can stand down."
+
+
 def stand_down_text(state_after: Mapping[str, Any]) -> str:
-    if roles_filled(state_after.get("roles") or {}) and not state_after.get("resolved"):
-        return "Two responders are already on the way. Thank you, you can stand down."
+    roles = state_after.get("roles") or {}
+    if roles_filled(roles, state_after.get("routes")) and not state_after.get("resolved"):
+        return on_the_way_text(state_after)
     return "This alert is no longer active. Thank you, you can stand down."
 
 
@@ -197,7 +214,7 @@ class IMessage:
         by_id = {d["id"]: d for d in after.get("dispatches") or []}
         for row in rows:
             d = by_id.get(row["id"]) or row
-            if row.get("status") == "accepted" and row.get("role") in ROLE_ORDER:
+            if row.get("status") == "accepted" and row.get("role") in HELPER_ROLES:
                 self.rt.spawn(self._to_responder(after, d, "role", role_text(row["role"], after)),
                               state["incident_id"])
             elif row.get("status") == "released" and row["id"] in self.alerted:

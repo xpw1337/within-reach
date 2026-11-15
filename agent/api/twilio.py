@@ -14,6 +14,7 @@ from twilio.twiml.voice_response import VoiceResponse
 from agent.api.dispatches import answer
 from agent.deps import get_runtime
 from agent.live.briefing import build_briefing
+from agent.live.imessage import help_offer, stand_down_text
 from agent.live.playbooks import camera_context
 
 router = APIRouter(prefix="/twilio")
@@ -53,14 +54,16 @@ def role_message(role: str | None, status: str | None, state: dict) -> str:
     landmark = (state.get("camera") or {}).get("landmark") or "the camera"
     aed = _aed_phrase(state)
     if role == "patient":
-        return (f"You are going to the person by {landmark}. "
+        runner = " Another responder is getting the AED." if (state.get("roles") or {}).get("aed_runner") else ""
+        return (f"You are going to the person by {landmark}.{runner} "
                 "Go to them, tap their shoulder and shout. If they don't respond and aren't breathing "
                 "normally, call 911 on speaker and start CPR: push hard and fast in the center of the chest.")
     if role == "aed_runner":
+        # Team lead, 2026-11-14: the AED runner fetches the AED first, then brings it to the person.
         where = f": {aed}" if aed else ""
-        return f"You are the AED runner. Get the AED{where}. Then bring it to {landmark}."
+        return f"You are the AED runner. First get the AED{where}. Then bring it to the person by {landmark}."
     if status == "released":
-        return "Two responders are already on the way. Thank you, you can stand down."
+        return stand_down_text(state)
     if status == "declined":
         return "Thank you. Goodbye."
     return "This alert is no longer active. Thank you."
@@ -87,8 +90,7 @@ async def voice(dispatch_id: str, request: Request, rt=Depends(get_runtime)) -> 
     where = f" at {building}" if building else ""
     aed = _aed_phrase(state)
     situation = f"Emergency alert from Within Reach. Someone has collapsed by {landmark}{where}."
-    ask = ("If you can help, you will either go to the person or bring the AED"
-           + (f", {aed}." if aed else ".") + " Press 1 to help. Press 2 if you can't.")
+    ask = help_offer(state, aed, parens=False) + " Press 1 to help. Press 2 if you can't."
     gather = vr.gather(num_digits=1, action=f"/twilio/gather/{dispatch_id}", method="POST", timeout=10)
     gather.say(situation + " " + ask)
     vr.say("No answer received. Goodbye.")

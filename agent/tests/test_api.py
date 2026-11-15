@@ -52,17 +52,30 @@ async def test_live_flow_shapes(ctx):
     await rt.clock.advance(5)
     dispatches = [d for d in rt.store.dispatches.values() if d["role"] != "staff"]
     ids = [d["id"] for d in dispatches]
-    r = await c.post(f"/dispatches/{ids[0]}/accept")
-    assert r.json() == {"role": "patient", "status": "accepted"}
+    r = await c.post(f"/dispatches/{ids[0]}/accept")  # AED route mapped: first accept fetches the AED
+    assert r.json() == {"role": "aed_runner", "status": "accepted"}
     r = await c.post(f"/dispatches/{ids[0]}/accept")  # idempotent
-    assert r.json() == {"role": "patient", "status": "accepted"}
+    assert r.json() == {"role": "aed_runner", "status": "accepted"}
     r = await c.post(f"/dispatches/{ids[1]}/decline")
     assert r.json() == {"status": "declined"}
     r = await c.post(f"/dispatches/{ids[2]}/accept")
-    assert r.json() == {"role": "aed_runner", "status": "accepted"}
+    assert r.json() == {"role": "patient", "status": "accepted"}
     r = await c.post(f"/dispatches/{ids[3]}/accept")
     assert r.json() == {"status": "released"}
-    r = await c.post(f"/dispatches/{ids[2]}/arrived", json={"with_aed": True})
+    for kind in ("aed_picked_up", "aed_picked_up", "aed_help_started"):  # a repeat is idempotent
+        r = await c.post(f"/incidents/{iid}/milestone", json={"kind": kind, "by": ids[0]})
+        assert r.json() == {"ok": True}
+    r = await c.post(f"/dispatches/{ids[2]}/arrived")
+    assert r.json() == {"status": "arrived"}
+    r = await c.post(f"/dispatches/{ids[0]}/arrived", json={"with_aed": True})
+    assert r.json() == {"status": "arrived"}
+    r = await c.post(f"/incidents/{iid}/milestone", json={"kind": "not_a_kind"})
+    assert r.status_code == 422
+    staff = next(d for d in rt.store.dispatches.values() if d["role"] == "staff")
+    r = await c.post(f"/dispatches/{staff['id']}/accept")
+    assert r.json() == {"role": "staff", "status": "accepted"}
+    assert rt.store.dispatches[staff["id"]]["status"] == "accepted"
+    r = await c.post(f"/dispatches/{staff['id']}/arrived")
     assert r.json() == {"status": "arrived"}
     r = await c.post(f"/incidents/{iid}/milestone", json={"kind": "cpr_started", "by": "desk"})
     assert r.json() == {"ok": True}
@@ -87,11 +100,16 @@ async def test_twilio_webhooks_return_twiml(ctx):
     r = await c.post(f"/twilio/voice/{d['id']}", data={"CallSid": "CA1"})
     assert r.headers["content-type"].startswith("application/xml")
     assert "<Gather" in r.text and "Press 1" in r.text and "east elevators" in r.text
-    r = await c.post(f"/twilio/gather/{d['id']}", data={"Digits": "1"})
-    assert "going to the person" in r.text
+    assert "get the AED, 14 meters, left of the elevators, and bring it to the person" in r.text
+    r = await c.post(f"/twilio/gather/{d['id']}", data={"Digits": "1"})  # first accept: AED runner
+    assert ("You are the AED runner. First get the AED: 14 meters, left of the elevators. "
+            "Then bring it to the person by east elevators.") in r.text
     d2 = [x for x in rt.store.dispatches.values() if x["role"] != "staff"][1]
     r = await c.post(f"/twilio/gather/{d2['id']}", data={"Digits": "1"})
-    assert "AED runner" in r.text and "14 meters, left of the elevators" in r.text
+    assert "going to the person" in r.text and "Another responder is getting the AED." in r.text
+    d3 = [x for x in rt.store.dispatches.values() if x["role"] != "staff"][2]
+    r = await c.post(f"/twilio/gather/{d3['id']}", data={"Digits": "1"})
+    assert "Two responders are already on the way." in r.text
     r = await c.post(f"/twilio/briefing/{iid}", data={})
     assert r.text.count("Possible cardiac arrest, witnessed collapse.") == 2
 

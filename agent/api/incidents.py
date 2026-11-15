@@ -23,7 +23,7 @@ class ByRequest(BaseModel):
 
 
 class MilestoneRequest(BaseModel):
-    kind: Literal["cpr_started", "aed_arrived", "responder_arrived"]
+    kind: Literal["cpr_started", "aed_arrived", "responder_arrived", "aed_picked_up", "aed_help_started"]
     by: str | None = None
 
 

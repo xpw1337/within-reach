@@ -190,7 +190,7 @@ async def test_9_two_accepts_then_third(tmp_path):
             state = await rt.deliver(iid, {"kind": "accept", "source": "app", "dispatch_id": did})
             d = next(x for x in state["dispatches"] if x["id"] == did)
             roles.append((d.get("role"), d["status"]))
-        assert roles == [("patient", "accepted"), ("aed_runner", "accepted"), (None, "released")]
+        assert roles == [("aed_runner", "accepted"), ("patient", "accepted"), (None, "released")]
         await rt.settle()
         released = [d for d in wave_dispatches(rt) if d["status"] == "released"]
         assert len(released) == 2
@@ -233,7 +233,7 @@ async def test_11_races(tmp_path):
         did = wave_dispatches(rt, 1)[0]["id"]
         a = await rt.deliver(iid, {"kind": "accept", "source": "app", "dispatch_id": did})
         b = await rt.deliver(iid, {"kind": "accept", "source": "twilio", "dispatch_id": did})
-        assert a["roles"] == b["roles"] == {"patient": did and wave_dispatches(rt, 1)[0]["responder_id"]}
+        assert a["roles"] == b["roles"] == {"aed_runner": did and wave_dispatches(rt, 1)[0]["responder_id"]}
         # signal after resolve
         await rt.deliver(iid, {"kind": "resolve", "source": "desk", "by": "desk"})
         await rt.settle()

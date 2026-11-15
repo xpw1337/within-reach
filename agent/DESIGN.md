@@ -68,8 +68,8 @@ class IncidentState(TypedDict):
     voice_check_done: bool
     routes: dict                      # target -> {distance_m, directions, audio_url, path}
     dispatches: list[dict]            # id, responder_id, wave, role, status
-    roles: dict                       # {"patient": responder_id | None, "aed_runner": responder_id | None}
-    milestones: dict                  # cpr_started, aed_arrived, responder_arrived -> ts
+    roles: dict                       # {"aed_runner": responder_id, "patient": responder_id}
+    milestones: dict                  # cpr_started, aed_arrived, responder_arrived, aed_picked_up, aed_help_started -> ts
     ems_briefed: bool
     resolved: bool
 ```
@@ -117,10 +117,10 @@ Implementation guidance:
 | Node | Behavior |
 |---|---|
 | `announce` | Plays the playbook script, repeats every 20 s until `cpr_started`, then hands over to `guide`. Emits `speak` events with `audio_url` and `target`. |
-| `dispatch` | Waves per spec §9.10: eligible = consent + on duty + seen < 10 min + in geofence. Order: staff, security, tenants, then public; CPR-trained first for cardiac. `WAVE_SIZE` per wave, app alert (insert `dispatches` row) and Twilio call to `callable` phones at the same time, `ACCEPT_TIMEOUT_SECONDS` per wave, 3 waves max. First accept is `patient`, second is `aed_runner`; then everyone else is `released` and their calls are hung up. |
+| `dispatch` | Waves per spec §9.10: eligible = consent + on duty + seen < 10 min + in geofence. Helper pool only (the building's staff get the staff alert instead). Order: nearest to the incident (camera lat/lng, else building), then CPR-trained first for cardiac, then id; with no incident coordinates: staff, security, tenants, then public; CPR-trained first for cardiac. `WAVE_SIZE` per wave, app alert (insert `dispatches` row) and Twilio call to `callable` phones at the same time, `ACCEPT_TIMEOUT_SECONDS` per wave, 3 waves max. Roles (team lead, 2026-11-14): with an AED route for the camera, first accept is `aed_runner` (get the AED, then bring it), second is `patient`; with no AED route, first accept is `patient` and there is no runner. Then every other helper is `released` and their calls are hung up. |
 | `brief_911` | Calls `DISPATCH_SIM_NUMBER`, speaks the briefing twice. Never waits for waves. Sets `ems_notified_at`. |
 | `police` | Only when hazards exist or `notify_police` is set. Demo: an `incident_events` row, no call. |
-| `staff` | Staff alert as dispatches with role `staff` (app only). |
+| `staff` | Staff alert as dispatches with role `staff` (app only), nearest first. A staff accept means "go to the person": status and timeline only, no helper role. |
 | `guide` | CPR coaching loop: `cardiac_cpr_coach` after `cpr_started`, `cardiac_aed_arrived` after `aed_arrived`. |
 | `handoff` | Builds the Utstein-style card from `incidents` timestamps on resolve. |
 
@@ -148,7 +148,7 @@ Implementation guidance:
 6. Unsafe scene from verify: stay-back script, police event, zero dispatches.
 7. Verify tries to drop a modifier or returns junk: ignored.
 8. False alarm tap at any point: everything stops, calls hung up.
-9. Two accepts, then a third: patient, aed_runner, released.
+9. Two accepts, then a third: aed_runner, patient, released (AED route mapped); patient, then released (no AED route).
 10. No accepts: three waves, then stop; briefing was not delayed.
 11. Races: confirm and auto-proceed timeout in the same tick; duplicate accept; signal after resolve.
 12. Telephony refuses 911.

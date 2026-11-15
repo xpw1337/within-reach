@@ -24,8 +24,11 @@ IncidentType = Literal["unknown", "cardiac", "fall"]
 Playbook = Literal["cardiac", "fall", "unsafe"]
 ConfirmState = Literal["pending", "confirmed", "false_alarm", "auto", "escalated_911_only"]
 FallBriefing = Literal["none", "armed", "cancelled", "fired"]
-MilestoneKind = Literal["cpr_started", "aed_arrived", "responder_arrived"]
-MILESTONE_KINDS: tuple[str, ...] = ("cpr_started", "aed_arrived", "responder_arrived")
+# aed_picked_up (the AED runner has the AED) and aed_help_started (the app asked for spoken AED
+# instructions) are recorded on the timeline only (team lead, 2026-11-14): no column, no script switch.
+MilestoneKind = Literal["cpr_started", "aed_arrived", "responder_arrived", "aed_picked_up", "aed_help_started"]
+MILESTONE_KINDS: tuple[str, ...] = (
+    "cpr_started", "aed_arrived", "responder_arrived", "aed_picked_up", "aed_help_started")
 
 # Dispatch statuses (enum dispatch_status in 0001_init.sql)
 DISPATCH_OPEN = ("sent", "timeout")  # can still be accepted
@@ -148,10 +151,10 @@ class IncidentState(TypedDict, total=False):
     waves_sent: int
     waves_closed: int
     waves_exhausted: bool  # no eligible responder was left for the next wave
-    roles: Annotated[dict[str, str], merge_dict]  # "patient" | "aed_runner" -> responder_id
+    roles: Annotated[dict[str, str], merge_dict]  # "aed_runner" | "patient" -> responder_id
 
     # actions
-    milestones: Annotated[dict[str, float], merge_dict]  # cpr_started, aed_arrived, responder_arrived
+    milestones: Annotated[dict[str, float], merge_dict]  # MILESTONE_KINDS -> ts
     ems_briefed: bool
     briefing_call_sid: str | None
     fall_911: FallBriefing

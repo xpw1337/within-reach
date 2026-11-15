@@ -200,14 +200,16 @@ def wave_state():
     return merge_state(s, {"dispatches": rows, "waves_sent": 1, "timers": {"wave_1": "tw1"}})
 
 
-def test_two_accepts_then_third_patient_runner_released():
+def test_two_accepts_then_third_runner_patient_released():
+    # AED route mapped (base()): first accept is the AED runner, second goes to the person
     s = wave_state()
     s, tr = step(s, "accept", ts=107.0, dispatch_id="d2")
-    assert s["roles"] == {"patient": "r2"} and s["first_accept_at"] == 107.0
+    assert s["roles"] == {"aed_runner": "r2"} and s["first_accept_at"] == 107.0
+    assert "dispatch" not in plan(s)  # wave 1 still open
     s, tr = step(s, "accept", ts=108.0, dispatch_id="d4")
-    assert s["roles"] == {"patient": "r2", "aed_runner": "r4"}
+    assert s["roles"] == {"aed_runner": "r2", "patient": "r4"}
     by_id = {d["id"]: d for d in s["dispatches"]}
-    assert by_id["d2"]["role"] == "patient" and by_id["d4"]["role"] == "aed_runner"
+    assert by_id["d2"]["role"] == "aed_runner" and by_id["d4"]["role"] == "patient"
     assert by_id["d1"]["status"] == "released" and by_id["d3"]["status"] == "released"
     assert {e["call_sid"] for e in tr.effects if e["type"] == "hangup"} == {"CA1", "CA3"}
     assert "wave_1" not in s["timers"] and "dispatch" not in plan(s)
@@ -220,7 +222,7 @@ def test_duplicate_accept_is_idempotent():
     s = wave_state()
     s, _ = step(s, "accept", ts=107.0, dispatch_id="d1")
     s2, tr = step(s, "accept", ts=107.5, dispatch_id="d1")
-    assert not tr.applied and s2["roles"] == {"patient": "r1"}
+    assert not tr.applied and s2["roles"] == {"aed_runner": "r1"}
 
 
 def test_wave_timeout_then_next_wave_then_stop_after_three():
@@ -233,7 +235,7 @@ def test_wave_timeout_then_next_wave_then_stop_after_three():
     assert "dispatch" in plan(s)
     # late accept of a timed-out dispatch still takes a role
     s2, tr = step(s, "accept", ts=127.0, dispatch_id="d3")
-    assert s2["roles"] == {"patient": "r3"}
+    assert s2["roles"] == {"aed_runner": "r3"}
     s = merge_state(s, {"waves_sent": 3, "waves_closed": 3})
     assert "dispatch" not in plan(s)
 

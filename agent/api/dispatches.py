@@ -17,7 +17,8 @@ class ArrivedRequest(BaseModel):
 
 
 def accept_response(d: dict[str, Any]) -> dict[str, Any]:
-    """``{role, status:"accepted"}`` when a role is held, ``{status:"released"}`` when both were taken."""
+    """``{role, status}`` when a role is held (``aed_runner``, ``patient`` or ``staff``),
+    ``{status:"released"}`` when the helper roles were already taken."""
     if d.get("status") in ("accepted", "arrived") and d.get("role"):
         return {"role": d["role"], "status": d["status"]}
     return {"status": d.get("status")}

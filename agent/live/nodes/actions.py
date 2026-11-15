@@ -29,9 +29,11 @@ def make(rt) -> dict[str, Any]:
         by_id = {r["id"]: r for r in everyone}
         # Nobody gets two alerts: anyone already dispatched, staff alert included, is skipped.
         already = [d["responder_id"] for d in state.get("dispatches") or []]
-        wave = rs.next_wave(everyone, state.get("building") or {}, now, cardiac=state.get("type") == "cardiac",
+        building = state.get("building") or {}
+        # Nearest helpers first: distance to the camera, else to the building (responders.py).
+        wave = rs.next_wave(everyone, building, now, cardiac=state.get("type") == "cardiac",
                             wave_size=cfg["wave_size"], seen_window_s=cfg["responder_seen_seconds"],
-                            already_sent=already)
+                            already_sent=already, origin=rs.incident_origin(state.get("camera"), building))
         if not wave:
             updates = {"waves_exhausted": True}
             await sync(rt.store, state, updates)
@@ -101,7 +103,9 @@ def make(rt) -> dict[str, Any]:
         (app alert, plus an iMessage when the staff member is ``callable`` with ``consent_calls``)."""
         now = rt.clock.now()
         everyone = await rt.store.list_responders()
-        targets = rs.staff_to_alert(everyone, state.get("building") or {})
+        building = state.get("building") or {}
+        targets = rs.staff_to_alert(everyone, building, origin=rs.incident_origin(state.get("camera"), building),
+                                    cardiac=state.get("type") == "cardiac")
         rows = [{
             "id": str(uuid.uuid4()), "incident_id": state["incident_id"], "responder_id": r["id"],
             "channel": "app", "role": "staff", "wave": 0, "status": "sent", "call_sid": None,
