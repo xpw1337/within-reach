@@ -82,7 +82,9 @@ export function ResponderRoute({
   const aedSweep = aedRoute?.path?.length ? aedRoute.path[aedRoute.path.length - 1] : (ownAeds[0]?.sweep_id ?? null);
   const aedAsset = ownAeds.find((a) => a.sweep_id === aedSweep) ?? ownAeds[0] ?? null;
   const personSweep = camera?.sweep_id ?? null;
-  const runner = role !== "patient";
+  // Only the AED runner fetches the AED. Staff ("go to the person") and the patient responder go
+  // straight to the person; before Accept (no role yet) the first helper accept will be the runner.
+  const runner = role === "aed_runner" || !role;
 
   // The leg from the link; with none, the AED first for a runner when an AED is mapped.
   const [legOverride, setLegOverride] = useState<Leg | null>(null);
