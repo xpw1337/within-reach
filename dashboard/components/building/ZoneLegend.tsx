@@ -20,11 +20,17 @@ export function ZoneLegend({
   thresholds,
   counts,
   hasAsset,
+  onlySimulated = false,
+  simulatedLabels = [],
 }: {
   type: GapType;
   thresholds: ThresholdState;
   counts?: Record<SweepZone, number> | null;
   hasAsset: boolean;
+  /** All equipment of this type here is a demo prop placed by the team. */
+  onlySimulated?: boolean;
+  /** Labels of demo props on this building, for the marker legend. */
+  simulatedLabels?: string[];
 }) {
   const t = thresholds.thresholds;
   const n = (z: SweepZone) => (counts ? <span className="num ml-auto pl-3 text-text">{counts[z]}</span> : null);
@@ -57,7 +63,7 @@ export function ZoneLegend({
         <li className="flex items-center gap-2">
           <Swatch zone="unknown" />
           <span className="text-muted">
-            {t ? copy.unknownZone(type, hasAsset) : `Unknown: thresholds unavailable`}
+            {t ? copy.unknownZone(type, hasAsset, onlySimulated) : `Unknown: thresholds unavailable`}
           </span>
           {n("unknown")}
         </li>
@@ -67,6 +73,19 @@ export function ZoneLegend({
           {n("unmapped")}
         </li>
       </ul>
+      {simulatedLabels.length > 0 && (
+        <ul className="space-y-1.5 border-t border-line pt-2">
+          {simulatedLabels.map((l) => (
+            <li key={l} className="flex items-start gap-2">
+              <span className="mt-0.5 inline-block h-3 w-4 shrink-0 rounded-sm border-2 border-dashed border-warn" aria-hidden />
+              <span>
+                {l}
+                <span className="block text-[0.72rem] text-muted">{copy.simulatedNotCensus}</span>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <p className="text-[0.72rem] leading-snug text-faint">
         {copy.approximation} {assetName(type)} times are walking times on the scan graph.
         {type === "exit" ? ` ${copy.exitApproximation}` : ""}

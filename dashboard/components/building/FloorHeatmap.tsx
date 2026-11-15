@@ -11,7 +11,8 @@ import {
   type Bounds,
   type SweepZone,
 } from "@/lib/heatmap";
-import type { Asset, GapType, TwinNode } from "@/lib/rows";
+import { assetDisplayLabel, simulatedMarker } from "@/lib/copy";
+import { isSimulated, type Asset, type GapType, type TwinNode } from "@/lib/rows";
 import { formatMeasure, type Thresholds } from "@/lib/thresholds";
 
 const W = 1000;
@@ -220,10 +221,17 @@ export function FloorHeatmap(props: HeatmapProps) {
           const emphasized = gap === type;
           const proposed = a.source === "proposed";
           const blocked = (a.flags ?? []).includes("blocked_exit");
-          const text = proposed ? `NEW ${ASSET_LABEL[a.type] ?? a.type.toUpperCase()}` : (ASSET_LABEL[a.type] ?? a.type.slice(0, 4).toUpperCase());
+          // A demo prop placed by the team: dashed outline and its own label, never shown as a scan finding.
+          const simulated = !proposed && isSimulated(a);
+          const short = ASSET_LABEL[a.type] ?? a.type.slice(0, 4).toUpperCase();
+          const text = proposed
+            ? `NEW ${ASSET_LABEL[a.type] ?? a.type.toUpperCase()}`
+            : simulated
+              ? simulatedMarker(short)
+              : short;
           const w = Math.max(34, text.length * 9 + 12);
           const h = 22;
-          const stroke = blocked ? "var(--danger)" : proposed ? "var(--accent)" : "#ffffff";
+          const stroke = blocked ? "var(--danger)" : proposed ? "var(--accent)" : simulated ? "var(--warn)" : "#ffffff";
           return (
             <g
               key={a.id}
@@ -240,7 +248,9 @@ export function FloorHeatmap(props: HeatmapProps) {
                   rx={5}
                   fill={proposed ? "var(--accent)" : "#0b0f14"}
                   stroke={stroke}
-                  strokeWidth={blocked ? 2.5 : 1.5}
+                  strokeWidth={blocked || simulated ? 2.5 : 1.5}
+                  strokeDasharray={simulated ? "5 3" : undefined}
+                  data-simulated={simulated ? "true" : undefined}
                 />
                 <text
                   textAnchor="middle"
@@ -248,7 +258,7 @@ export function FloorHeatmap(props: HeatmapProps) {
                   fontSize={12}
                   fontWeight={800}
                   letterSpacing={0.5}
-                  fill={proposed ? "#06121b" : blocked ? "var(--danger)" : "#fff"}
+                  fill={proposed ? "#06121b" : blocked ? "var(--danger)" : simulated ? "var(--warn)" : "#fff"}
                   style={{ fontFamily: "var(--font-sans)" }}
                 >
                   {text}
@@ -256,7 +266,7 @@ export function FloorHeatmap(props: HeatmapProps) {
                 <path d={`M -5 ${h / 2} L 0 ${h / 2 + 6} L 5 ${h / 2}`} fill={proposed ? "var(--accent)" : stroke} />
               </g>
               <title>
-                {`${a.label ?? a.type}${proposed ? " (proposed by the Fixer)" : ""}${blocked ? " (looks blocked)" : ""}`}
+                {`${simulated ? assetDisplayLabel(a) : (a.label ?? a.type)}${proposed ? " (proposed by the Fixer)" : ""}${blocked ? " (looks blocked)" : ""}`}
               </title>
             </g>
           );

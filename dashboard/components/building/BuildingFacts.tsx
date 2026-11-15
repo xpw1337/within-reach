@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Badge, Panel, Stat } from "@/components/ui";
-import { assetTitle, copy, EMPTY } from "@/lib/copy";
+import { assetDisplayLabel, assetTitle, copy, EMPTY } from "@/lib/copy";
 import { int, pct } from "@/lib/format";
-import { GAP_TYPES, type Asset, type Building, type BuildingScore, type GapType } from "@/lib/rows";
+import { GAP_TYPES, isSimulated, type Asset, type Building, type BuildingScore, type GapType } from "@/lib/rows";
 import { measure, type Thresholds } from "@/lib/thresholds";
 
 function Row({ k, v }: { k: string; v: ReactNode }) {
@@ -100,10 +100,15 @@ export function FlagsList({
   assets: Asset[];
   mapped: boolean;
 }) {
-  const real = assets.filter((a) => a.source !== "proposed");
+  // Demo props placed by the team are not census findings: they never count as "visible in the scan".
+  const real = assets.filter((a) => a.source !== "proposed" && !isSimulated(a));
+  const simulated = assets.filter((a) => a.source !== "proposed" && isSimulated(a));
   const blockedAssets = real.filter((a) => (a.flags ?? []).includes("blocked_exit"));
   const blockedCount = score?.blocked_exits ?? (blockedAssets.length || null);
-  const flags: { tone: "red" | "warn"; text: string; detail?: string }[] = [];
+  const flags: { tone: "red" | "warn" | "demo"; text: string; detail?: string }[] = [];
+  for (const label of new Set(simulated.map(assetDisplayLabel))) {
+    flags.push({ tone: "demo", text: label, detail: copy.simulatedNotCensus });
+  }
   if (score?.stairs_only) flags.push({ tone: "warn", text: copy.stairsOnly });
   if (blockedCount && blockedCount > 0) {
     flags.push({
@@ -130,7 +135,15 @@ export function FlagsList({
         <ul className="space-y-2">
           {flags.map((f) => (
             <li key={f.text} className="flex items-start gap-2 text-sm">
-              <span className={f.tone === "red" ? "mt-1.5 size-2 rounded-full bg-zone-red" : "mt-1.5 size-2 rounded-full bg-warn"} />
+              <span
+                className={
+                  f.tone === "red"
+                    ? "mt-1.5 size-2 shrink-0 rounded-full bg-zone-red"
+                    : f.tone === "demo"
+                      ? "mt-1 h-3 w-4 shrink-0 rounded-sm border-2 border-dashed border-warn"
+                      : "mt-1.5 size-2 shrink-0 rounded-full bg-warn"
+                }
+              />
               <span>
                 {f.text}
                 {f.detail && <span className="block text-xs text-muted">{f.detail}</span>}

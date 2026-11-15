@@ -2,7 +2,8 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 import { env } from "@/lib/env";
-import type { Asset, TwinNode } from "@/lib/rows";
+import { assetDisplayLabel } from "@/lib/copy";
+import { isSimulated, type Asset, type TwinNode } from "@/lib/rows";
 
 // The subset of the Showcase SDK used here (types from api.matterport.com/sdk/types/sdk.d.ts).
 // Kept local so the build never depends on the package's downloaded type file.
@@ -27,6 +28,8 @@ const TAG_COLOR: Record<string, { r: number; g: number; b: number }> = {
   exit: { r: 0.96, g: 0.77, b: 0.26 },
   exit_sign: { r: 0.96, g: 0.77, b: 0.26 },
   proposed: { r: 0.36, g: 0.78, b: 1 },
+  // Demo props placed by the team: the --warn orange, never the color of an AED from the scan.
+  simulated: { r: 1, g: 0.54, b: 0.24 },
 };
 const TAG_LABEL: Record<string, string> = { aed: "AED", extinguisher: "Extinguisher", exit: "Exit", exit_sign: "Exit sign" };
 
@@ -50,7 +53,7 @@ export function MatterportTwin({
   height = 560,
 }: {
   modelId: string | null;
-  assets: Pick<Asset, "id" | "type" | "sweep_id" | "x" | "y" | "z" | "source" | "label">[];
+  assets: Pick<Asset, "id" | "type" | "sweep_id" | "x" | "y" | "z" | "source" | "label" | "flags">[];
   nodes: Pick<TwinNode, "sweep_id" | "x" | "y" | "z">[];
   showProposed?: boolean;
   /** Sweep ids to fly along; a new flyKey restarts the flight. */
@@ -75,11 +78,16 @@ export function MatterportTwin({
         const z = a.z ?? n?.z;
         if (typeof x !== "number" || typeof y !== "number" || typeof z !== "number") return null;
         const proposed = a.source === "proposed";
+        const simulated = !proposed && isSimulated(a);
         return {
-          label: proposed ? `Proposed ${TAG_LABEL[a.type] ?? a.type}` : `${TAG_LABEL[a.type] ?? a.type}${a.label ? `: ${a.label}` : ""}`,
+          label: proposed
+            ? `Proposed ${TAG_LABEL[a.type] ?? a.type}`
+            : simulated
+              ? assetDisplayLabel(a)
+              : `${TAG_LABEL[a.type] ?? a.type}${a.label ? `: ${a.label}` : ""}`,
           anchorPosition: { x, y, z },
           stemVector: { x: 0, y: 0.3, z: 0 },
-          color: proposed ? TAG_COLOR.proposed : TAG_COLOR[a.type],
+          color: proposed ? TAG_COLOR.proposed : simulated ? TAG_COLOR.simulated : TAG_COLOR[a.type],
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null);

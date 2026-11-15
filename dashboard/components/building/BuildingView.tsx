@@ -6,11 +6,11 @@ import { useEffect, useEffectEvent, useMemo, useState } from "react";
 import { useAppStatus } from "@/components/shell/AppStatus";
 import { Badge, Button, EmptyState, Panel, Segmented } from "@/components/ui";
 import { api } from "@/lib/api";
-import { assetName, assetTitle, copy, hasAssetOfType } from "@/lib/copy";
+import { assetDisplayLabel, assetName, assetTitle, copy, hasAssetOfType, onlySimulatedOfType } from "@/lib/copy";
 import { boundsOf, floorOf, floorsOf, hasScenario, indexCoverage, sweepZone, zoneCounts } from "@/lib/heatmap";
 import { useBuilding } from "@/lib/hooks/useBuilding";
 import { useThresholds } from "@/lib/hooks/useThresholds";
-import { GAP_TYPES, isFixture, type GapType } from "@/lib/rows";
+import { GAP_TYPES, isSimulated, nonCensusKind, type GapType } from "@/lib/rows";
 import { formatMeasure } from "@/lib/thresholds";
 import { CostarFacts, FlagsList, ScoreSummary } from "./BuildingFacts";
 import { DocumentsTab } from "./DocumentsTab";
@@ -91,6 +91,9 @@ export function BuildingView({ id }: { id: string }) {
     return out;
   }, [data.assets, data.coverage]);
   const b = data.building;
+  const kind = nonCensusKind(b);
+  const simulated = useMemo(() => data.assets.filter((a) => a.source !== "proposed" && isSimulated(a)), [data.assets]);
+  const simulatedLabels = [...new Set(simulated.map(assetDisplayLabel))];
   const apiDown = health.status === "unconfigured";
   const has3d = matterportAvailable(b?.matterport_model_id);
   const show3d = has3d && view === "3d";
@@ -176,7 +179,8 @@ export function BuildingView({ id }: { id: string }) {
             <span>{b?.address ?? "--"}</span>
             {b?.city && <span>{b.city}</span>}
             {b?.property_type && <Badge tone="muted">{b.property_type}</Badge>}
-            {isFixture(b) && <Badge tone="warn">{copy.fixtureTag}</Badge>}
+            {kind === "fixture" && <Badge tone="warn">{copy.fixtureTag}</Badge>}
+            {kind === "demo" && <Badge tone="warn">{copy.demoTag}</Badge>}
           </div>
         </div>
         <div className="flex items-center gap-3">
@@ -238,6 +242,18 @@ export function BuildingView({ id }: { id: string }) {
           }
           bodyClassName="p-0"
         >
+          {simulated.length > 0 && (
+            <div
+              role="note"
+              className="flex items-start gap-3 border-b border-warn/40 bg-warn/10 px-4 py-2.5 text-sm text-warn"
+            >
+              <span className="mt-0.5 inline-block h-3.5 w-5 shrink-0 rounded-sm border-2 border-dashed border-warn" aria-hidden />
+              <span>
+                <span className="font-semibold">{copy.simulatedNotice}</span>{" "}
+                <span className="text-warn/80">{copy.simulatedPresent(simulatedLabels)}</span>
+              </span>
+            </div>
+          )}
           {!data.nodesLoaded ? (
             <div className="p-4">
               <EmptyState title="Loading the scan graph" />
@@ -303,6 +319,8 @@ export function BuildingView({ id }: { id: string }) {
                   thresholds={th}
                   counts={mapped ? counts : null}
                   hasAsset={hasAssetOfType(data.assets, type)}
+                  onlySimulated={onlySimulatedOfType(data.assets, type)}
+                  simulatedLabels={simulatedLabels}
                 />
                 <div className="rounded-md border border-line bg-panel-2 p-3 text-sm">
                   <div className="label mb-1">Position</div>

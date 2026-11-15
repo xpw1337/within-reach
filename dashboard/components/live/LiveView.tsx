@@ -1,11 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { useAppStatus } from "@/components/shell/AppStatus";
 import { Badge, Button, cx, EmptyState, Panel, Stat } from "@/components/ui";
 import { api } from "@/lib/api";
 import { readEmsBriefed, readEmsDoor, readVerification } from "@/lib/contracts";
-import { copy, EMPTY } from "@/lib/copy";
+import { assetDisplayLabel, copy, EMPTY, roleLabel } from "@/lib/copy";
 import { clock, humanize, offset, secondsBetween } from "@/lib/format";
 import {
   confirmState,
@@ -19,7 +20,7 @@ import {
 import { useBuilding } from "@/lib/hooks/useBuilding";
 import { isOpen, useLive } from "@/lib/hooks/useLive";
 import { useNow } from "@/lib/hooks/useNow";
-import type { Camera, Dispatch, Incident, IncidentEvent, Responder } from "@/lib/rows";
+import { isSimulated, type Camera, type Dispatch, type Incident, type IncidentEvent, type Responder } from "@/lib/rows";
 import { RouteFlythrough } from "./RouteFlythrough";
 
 const DESK = "desk";
@@ -106,7 +107,17 @@ function ConfirmBar({ incident, events, cmd }: { incident: Incident; events: Inc
   );
 }
 
-function IncidentCard({ incident, camera, buildingName }: { incident: Incident; camera: Camera | null; buildingName: string | null }) {
+function IncidentCard({
+  incident,
+  camera,
+  buildingId,
+  buildingName,
+}: {
+  incident: Incident;
+  camera: Camera | null;
+  buildingId: string | null;
+  buildingName: string | null;
+}) {
   const v = readVerification(incident.verification);
   const open = isOpen(incident);
   return (
@@ -120,7 +131,18 @@ function IncidentCard({ incident, camera, buildingName }: { incident: Incident; 
           <div className="text-3xl font-bold tracking-tight">{incidentTitle(incident)}</div>
           <div className="text-base">
             {camera?.landmark ? `By ${camera.landmark}` : EMPTY}
-            {buildingName ? <span className="text-muted">, {buildingName}</span> : null}
+            {buildingName ? (
+              <span className="text-muted">
+                ,{" "}
+                {buildingId ? (
+                  <Link href={`/building/${buildingId}`} className="underline decoration-dotted hover:text-accent">
+                    {buildingName}
+                  </Link>
+                ) : (
+                  buildingName
+                )}
+              </span>
+            ) : null}
             {camera?.floor !== null && camera?.floor !== undefined ? <span className="text-muted">, floor {camera.floor}</span> : null}
           </div>
           <div className="flex flex-wrap gap-2">
@@ -231,7 +253,7 @@ function ResponderList({ dispatches, responders, incident }: { dispatches: Dispa
                     {r?.cpr_trained ? ", CPR trained" : ""}, wave {d.wave ?? EMPTY}, {humanize(d.channel)}
                   </div>
                 </div>
-                {d.role && <Badge tone={ROLE_TONE[d.role] ?? "muted"}>{humanize(d.role)}</Badge>}
+                {d.role && <Badge tone={ROLE_TONE[d.role] ?? "muted"}>{roleLabel(d.role)}</Badge>}
                 <span className="w-24 text-right">
                   <span
                     className={cx(
@@ -252,7 +274,16 @@ function ResponderList({ dispatches, responders, incident }: { dispatches: Dispa
   );
 }
 
-function EmsDoorPanel({ buildingDoor, events }: { buildingDoor: unknown; events: IncidentEvent[] }) {
+function EmsDoorPanel({
+  buildingDoor,
+  events,
+  simulatedLabels,
+}: {
+  buildingDoor: unknown;
+  events: IncidentEvent[];
+  /** Demo props placed by the team in this building, named wherever the briefing may mention them. */
+  simulatedLabels: string[];
+}) {
   const briefed = [...events].reverse().find((e) => e.kind === "ems_briefed");
   const b = briefed ? readEmsBriefed(briefed.payload) : null;
   const door = readEmsDoor(buildingDoor as never);
@@ -278,6 +309,14 @@ function EmsDoorPanel({ buildingDoor, events }: { buildingDoor: unknown; events:
           {b.briefingText}
         </div>
       )}
+      {simulatedLabels.map((l) => (
+        <div key={l} className="mt-3 flex items-start gap-2 text-xs text-warn">
+          <span className="mt-0.5 inline-block h-3 w-4 shrink-0 rounded-sm border-2 border-dashed border-warn" aria-hidden />
+          <span>
+            <span className="font-semibold">{l}</span>: {copy.simulatedNotCensus}
+          </span>
+        </div>
+      ))}
     </Panel>
   );
 }
@@ -372,6 +411,9 @@ export function LiveView() {
   const buildingId = i?.building_id ?? camera?.building_id ?? null;
   const building = useBuilding(buildingId ?? "");
   const speak = latestRouteSpeak(live.events);
+  const simulatedLabels = [
+    ...new Set(building.assets.filter((a) => a.source !== "proposed" && isSimulated(a)).map(assetDisplayLabel)),
+  ];
   const nameOf = new Map(live.responders.map((r) => [r.id, r.name]));
   const who = (actor: string | null) => {
     if (!actor) return EMPTY;
@@ -409,7 +451,7 @@ export function LiveView() {
           )}
           <ConfirmBar incident={i} events={live.events} cmd={cmd} />
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
-            <IncidentCard incident={i} camera={camera} buildingName={building.building?.name ?? null} />
+            <IncidentCard incident={i} camera={camera} buildingId={buildingId} buildingName={building.building?.name ?? null} />
             <LatencyMetrics incident={i} dispatches={live.dispatches} />
           </div>
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_440px]">
@@ -418,7 +460,11 @@ export function LiveView() {
           </div>
           <div className="grid gap-4 xl:grid-cols-3">
             <ResponderList dispatches={live.dispatches} responders={live.responders} incident={i} />
-            <EmsDoorPanel buildingDoor={building.building?.ems_door ?? null} events={live.events} />
+            <EmsDoorPanel
+              buildingDoor={building.building?.ems_door ?? null}
+              events={live.events}
+              simulatedLabels={simulatedLabels}
+            />
             <HandoffCard incident={i} />
           </div>
         </>

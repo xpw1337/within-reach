@@ -1,9 +1,9 @@
 // Pure helpers for the /live page. Every time shown is computed from incidents
 // and incident_events rows (docs/CONTRACTS.md section 3).
 import { asObj, readClassified, readConfirmRequested, readSpeak, readTimerStarted } from "./contracts";
-import { copy } from "./copy";
+import { copy, milestoneLabel, roleLabel } from "./copy";
 import { humanize, secondsBetween } from "./format";
-import type { Dispatch, Incident, IncidentEvent } from "./rows";
+import { isSimulated, type Asset, type Dispatch, type Incident, type IncidentEvent } from "./rows";
 
 export function incidentTitle(i: Incident): string {
   if (i.type === "cardiac") return copy.possibleCardiac;
@@ -139,6 +139,11 @@ export function describeEvent(e: IncidentEvent, who: (actor: string | null) => s
       return "Staff alerted";
     case "resolved":
       return "Incident resolved";
+    case "milestone": {
+      // {kind, by?}: cpr_started | aed_arrived | responder_arrived | aed_picked_up | aed_help_started.
+      const kind = typeof p?.kind === "string" ? p.kind : null;
+      return milestoneLabel(kind);
+    }
     case "voice_check_result":
       // {responsive}: only a sustained raised hand counts (spec section 3).
       return p?.responsive === true
@@ -170,7 +175,7 @@ export function describeEvent(e: IncidentEvent, who: (actor: string | null) => s
       // {dispatch_id, responder_id, role, wave, channel, call_sid?}
       const rid = typeof p?.responder_id === "string" ? p.responder_id : null;
       const name = rid ? who(`responder:${rid}`) : e.actor?.startsWith("responder:") ? who(e.actor) : "a responder";
-      const role = typeof p?.role === "string" ? ` as ${humanize(p.role)}` : "";
+      const role = typeof p?.role === "string" ? ` as ${roleLabel(p.role)}` : "";
       const via = [
         typeof p?.wave === "number" ? `wave ${p.wave}` : null,
         typeof p?.channel === "string" ? humanize(p.channel) : null,
@@ -190,4 +195,23 @@ export function describeEvent(e: IncidentEvent, who: (actor: string | null) => s
       return `${humanize(e.kind)}${rest ? ` (${rest})` : ""}`;
     }
   }
+}
+
+/**
+ * Does this route lead to a demo prop placed by the team? The asset at the
+ * route's last sweep decides; with no asset there, the route counts as leading
+ * to a demo prop only when every asset of that type in the building is one.
+ */
+export function routeEndsAtSimulated(
+  path: string[],
+  target: string,
+  assets: Pick<Asset, "type" | "sweep_id" | "source" | "flags">[],
+): boolean {
+  const types = target === "exit" ? ["exit", "exit_sign"] : [target];
+  const own = assets.filter((a) => a.source !== "proposed" && types.includes(a.type));
+  if (own.length === 0) return false;
+  const end = path.length ? path[path.length - 1] : null;
+  const atEnd = end ? own.filter((a) => a.sweep_id === end) : [];
+  if (atEnd.length > 0) return atEnd.every((a) => isSimulated(a));
+  return own.every((a) => isSimulated(a));
 }

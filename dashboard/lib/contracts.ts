@@ -124,6 +124,19 @@ export function readRunNotes(notes: string | null | undefined): { budgetUsd: num
   return { budgetUsd: null, text: notes };
 }
 
+/** runs.notes JSON: building_ids is set for a rerun of named buildings. */
+export function readRunBuildingIds(notes: string | null | undefined): string[] {
+  if (!notes) return [];
+  try {
+    const o = asObj(JSON.parse(notes) as Json);
+    return asArr(o?.building_ids)
+      .map(asStr)
+      .filter((x): x is string => Boolean(x));
+  } catch {
+    return [];
+  }
+}
+
 export function readEmsBriefed(payload: Json | null) {
   const o = asObj(payload);
   return { briefingText: asStr(o?.briefing_text), emsDoor: readPoint(o?.ems_door ?? null) };

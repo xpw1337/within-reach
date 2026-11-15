@@ -12,7 +12,7 @@ import { assetName, assetTitle, copy, EMPTY } from "@/lib/copy";
 import { dateTime, int, pct, usd } from "@/lib/format";
 import { useRealtimeTable } from "@/lib/hooks/useRealtimeTable";
 import { useThresholds } from "@/lib/hooks/useThresholds";
-import { GAP_TYPES, isFixture, type Building, type BuildingScore, type GapType } from "@/lib/rows";
+import { GAP_TYPES, isExcludedFromCensus, type Building, type BuildingScore, type GapType } from "@/lib/rows";
 import { selectAll } from "@/lib/supabase";
 import { formatLimit, formatMeasure, measureName, type Thresholds } from "@/lib/thresholds";
 import { redColor, type CityPoint } from "./CityMap";
@@ -51,7 +51,7 @@ export function CityView() {
   const [gap, setGap] = useState<GapType>("aed");
   const [stopping, setStopping] = useState(false);
   const [stopMsg, setStopMsg] = useState<string | null>(null);
-  const { latestRun, health } = useAppStatus();
+  const { latestRun, latestCensusRun, health } = useAppStatus();
   const th = useThresholds();
   const t = th.thresholds;
 
@@ -80,27 +80,31 @@ export function CityView() {
 
   const byId = useMemo(() => new Map(buildings.rows.map((b) => [b.id, b])), [buildings.rows]);
 
+  // Fixture and demo buildings never reach the map, the headline, the ranked
+  // list or the counts; they stay reachable by direct link (/building/[id]).
   const scored = useMemo(
     () =>
       scores.rows
         .map((s) => ({ s, b: byId.get(s.building_id) }))
-        .filter((x): x is { s: BuildingScore; b: MapBuilding } => Boolean(x.b && sameCity(x.b.city, city))),
+        .filter(
+          (x): x is { s: BuildingScore; b: MapBuilding } =>
+            Boolean(x.b && !isExcludedFromCensus(x.b) && sameCity(x.b.city, city)),
+        ),
     [scores.rows, byId, city],
   );
-  const counted = scored.filter((x) => !isFixture(x.b));
   const allCounted = scores.rows.filter((s) => {
     const b = byId.get(s.building_id);
-    return b && !isFixture(b);
+    return b && !isExcludedFromCensus(b);
   }).length;
 
-  const withGap = counted.filter((x) => {
+  const withGap = scored.filter((x) => {
     const r = gapOf(x.s, gap).red;
     return typeof r === "number" && r > 0;
   }).length;
-  const measuredForGap = counted.filter((x) => typeof gapOf(x.s, gap).red === "number").length;
+  const measuredForGap = scored.filter((x) => typeof gapOf(x.s, gap).red === "number").length;
   const share = measuredForGap > 0 ? withGap / measuredForGap : null;
-  const peopleAtRisk = counted.reduce((sum, x) => sum + (x.s.people_at_risk ?? 0), 0);
-  const anyPeople = counted.some((x) => x.s.people_at_risk !== null);
+  const peopleAtRisk = scored.reduce((sum, x) => sum + (x.s.people_at_risk ?? 0), 0);
+  const anyPeople = scored.some((x) => x.s.people_at_risk !== null);
 
   const points: CityPoint[] = useMemo(
     () =>
@@ -131,7 +135,7 @@ export function CityView() {
   );
 
   const cityInfo = CITIES.find((c) => c.value === city) ?? CITIES[0];
-  const run = latestRun;
+  const run = latestCensusRun;
   const runFrac =
     run && run.buildings_target && run.buildings_target > 0
       ? Math.min(1, (run.buildings_done ?? 0) / run.buildings_target)
@@ -177,12 +181,12 @@ export function CityView() {
             </div>
           </div>
           <div className="mt-5 grid grid-cols-3 gap-4 border-t border-line pt-4">
-            <Stat label={`Measured in ${city}`} value={counted.length ? int(counted.length) : null} size="sm" />
+            <Stat label={`Measured in ${city}`} value={scored.length ? int(scored.length) : null} size="sm" />
             <Stat label="Measured, both cities" value={allCounted ? int(allCounted) : null} size="sm" />
             <Stat label={copy.peopleAtRiskEstimate} value={anyPeople ? int(peopleAtRisk) : null} size="sm" />
           </div>
           <p className="mt-3 text-[0.72rem] text-faint">
-            Counts come from building_scores; demo fixtures are excluded; red shares are {copy.redShareOfPositions}.{" "}
+            Counts come from building_scores; {copy.nonCensusExcluded}; red shares are {copy.redShareOfPositions}.{" "}
             {copy.approximation} {gap === "exit" ? copy.exitApproximation : ""}
           </p>
         </Panel>
@@ -291,7 +295,6 @@ export function CityView() {
                         <span className="block truncate text-sm font-semibold">{b.name ?? "Building"}</span>
                         <span className="block truncate text-xs text-muted">
                           {none ? copy.noneVisible(gap) : `worst ${formatMeasure(gap, g.worst, t)}`}
-                          {isFixture(b) ? `, ${copy.fixtureTag}` : ""}
                         </span>
                       </span>
                       <span className="text-right">

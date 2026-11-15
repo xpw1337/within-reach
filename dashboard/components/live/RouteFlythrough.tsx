@@ -5,10 +5,11 @@ import { useEffect, useMemo, useState } from "react";
 import { FloorHeatmap } from "@/components/building/FloorHeatmap";
 import { matterportAvailable } from "@/components/building/MatterportTwin";
 import { EmptyState, Panel, Segmented } from "@/components/ui";
-import { assetName } from "@/lib/copy";
+import { assetName, copy, simulatedLabel } from "@/lib/copy";
 import { boundsOf, floorOf, indexCoverage } from "@/lib/heatmap";
 import { useBuilding } from "@/lib/hooks/useBuilding";
 import { useThresholds } from "@/lib/hooks/useThresholds";
+import { routeEndsAtSimulated } from "@/lib/incident";
 import type { Camera, CameraRoute } from "@/lib/rows";
 
 const STEP_MS = 450;
@@ -66,10 +67,12 @@ export function RouteFlythrough({
   const camNode = camera?.sweep_id ? byId.get(camera.sweep_id) : undefined;
   const floor = head ? floorOf(head) : camNode ? floorOf(camNode) : (camera?.floor ?? 0);
   const gap = target === "extinguisher" ? "extinguisher" : target === "exit" ? "exit" : "aed";
+  const simulated = route ? routeEndsAtSimulated(path, target, data.assets) : false;
+  const targetName = simulated ? `the ${simulatedLabel(target)}` : `the ${assetName(target)}`;
 
   return (
     <Panel
-      title={`Route to the ${assetName(target)}${speak ? ", synced to the speaker" : ""}`}
+      title={`Route to ${targetName}${speak ? ", synced to the speaker" : ""}`}
       right={
         <div className="flex items-center gap-3">
           {has3d && (
@@ -131,6 +134,12 @@ export function RouteFlythrough({
               <span className="text-muted">No precomputed route to the {assetName(target)} for this camera.</span>
             )}
           </div>
+          {simulated && (
+            <div className="mt-2 flex items-start gap-2 px-1 text-xs text-warn">
+              <span className="mt-0.5 inline-block h-3 w-4 shrink-0 rounded-sm border-2 border-dashed border-warn" aria-hidden />
+              {copy.simulatedRoute}
+            </div>
+          )}
         </>
       )}
     </Panel>

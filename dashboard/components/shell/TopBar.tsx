@@ -46,7 +46,7 @@ function CurrentNav() {
 }
 
 export function TopBar() {
-  const { latestRun, runsStatus, health } = useAppStatus();
+  const { latestCensusRun: latestRun, runsStatus, health } = useAppStatus();
 
   const dataTone = !supabaseConfigured
     ? "down"

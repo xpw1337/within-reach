@@ -100,7 +100,7 @@ describe("timeline wording", () => {
       "Classified cardiac + seizure",
     );
     expect(describeEvent(ev("dispatch_accepted", { responder_id: "r1", role: "aed_runner" }), who)).toBe(
-      "Accepted: Sam as aed runner",
+      "Accepted: Sam as AED runner",
     );
     expect(
       describeEvent(ev("dispatch_sent", { responder_id: "r1", role: "patient", wave: 1, channel: "call", call_sid: "CA1" }), who),
