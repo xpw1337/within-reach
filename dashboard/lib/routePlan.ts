@@ -155,3 +155,70 @@ export function planLeg(input: {
   if (!path) return none;
   return { leg, path, start, end, meters: pathMeters(nodes, path), censusRoute: false };
 }
+
+/** Every sweep from which `target` can be walked to (neighbors as two-way edges). */
+export function reachableTo(nodes: RouteNode[], target: string): Set<string> {
+  const adj = new Map<string, Set<string>>();
+  const link = (a: string, b: string) => {
+    if (!adj.has(a)) adj.set(a, new Set());
+    adj.get(a)!.add(b);
+  };
+  const ids = new Set(nodes.map((n) => n.sweep_id));
+  for (const n of nodes) {
+    for (const m of n.neighbors ?? []) {
+      if (m === n.sweep_id || !ids.has(m)) continue;
+      link(n.sweep_id, m);
+      link(m, n.sweep_id);
+    }
+  }
+  const seen = new Set<string>();
+  if (!ids.has(target)) return seen;
+  const queue = [target];
+  seen.add(target);
+  while (queue.length) {
+    const cur = queue.shift()!;
+    for (const m of adj.get(cur) ?? []) {
+      if (!seen.has(m)) {
+        seen.add(m);
+        queue.push(m);
+      }
+    }
+  }
+  return seen;
+}
+
+type FollowNode = { sweep_id: string; x: number | null; z: number | null };
+
+/**
+ * Where the 3D view should go for a new position of the helper (plan meters): the scan point nearest
+ * to them among `candidates` (the leg's floor, able to reach the leg's end). If it is on the current
+ * path, move there; if not, re-plan the leg from it. Nothing when it is not at least `minGainM`
+ * closer than the point the view is at now, so GPS or step jitter does not flip the view.
+ */
+export function followStep(args: {
+  path: string[];
+  byId: Map<string, { x: number | null; z: number | null }>;
+  candidates: FollowNode[];
+  at: number;
+  p: { x: number; z: number };
+  minGainM?: number;
+}): { kind: "move"; index: number } | { kind: "reroute"; sweep: string } | null {
+  const { path, byId, candidates, at, p, minGainM = 1 } = args;
+  let near: FollowNode | null = null;
+  let nearD = Infinity;
+  for (const n of candidates) {
+    if (typeof n.x !== "number" || typeof n.z !== "number") continue;
+    const d = Math.hypot(n.x - p.x, n.z - p.z);
+    if (d < nearD) {
+      near = n;
+      nearD = d;
+    }
+  }
+  if (!near) return null;
+  const cur = at >= 0 && at < path.length ? byId.get(path[at]) : undefined;
+  const curD = cur && typeof cur.x === "number" && typeof cur.z === "number" ? Math.hypot(cur.x - p.x, cur.z - p.z) : Infinity;
+  if (nearD + minGainM > curD) return null;
+  const i = path.indexOf(near.sweep_id);
+  if (i >= 0) return i === at ? null : { kind: "move", index: i };
+  return { kind: "reroute", sweep: near.sweep_id };
+}

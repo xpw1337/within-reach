@@ -6,13 +6,13 @@ import { FloorHeatmap } from "@/components/building/FloorHeatmap";
 import { matterportAvailable } from "@/components/building/MatterportTwin";
 import { Button, EmptyState, Segmented } from "@/components/ui";
 import { assetDisplayLabel, copy } from "@/lib/copy";
-import { distanceToPathPoint, latLngToPlan, nearestPathIndex, type GeorefTransform } from "@/lib/georef";
+import { latLngToPlan, type GeorefTransform } from "@/lib/georef";
 import { boundsOf, floorOf, indexCoverage } from "@/lib/heatmap";
 import { UUID_RE, useBuilding } from "@/lib/hooks/useBuilding";
 import { useRealtimeTable } from "@/lib/hooks/useRealtimeTable";
 import { useThresholds } from "@/lib/hooks/useThresholds";
 import { routeEndsAtSimulated } from "@/lib/incident";
-import { planLeg, spokenMeters, type Leg } from "@/lib/routePlan";
+import { followStep, planLeg, reachableTo, spokenMeters, type Leg } from "@/lib/routePlan";
 import { isSimulated, type CameraRoute } from "@/lib/rows";
 import { getSupabase } from "@/lib/supabase";
 
@@ -84,8 +84,10 @@ export function ResponderRoute({
   // The leg from the link; with none, the AED first for a runner when an AED is mapped.
   const [legOverride, setLegOverride] = useState<Leg | null>(null);
   const leg: Leg = legOverride ?? legParam ?? (runner && aedSweep ? "to_aed" : "to_person");
-  // The start from the app applies to the first leg only; the second leg starts at the AED.
-  const start = legOverride ? null : from;
+  // Where the leg starts: the helper's own spot once a position arrived (re-planned by follow), else
+  // the start from the app (first leg only), else the leg's default (the person, or the AED on the way back).
+  const [rerouted, setRerouted] = useState<{ leg: Leg; sweep: string } | null>(null);
+  const start = rerouted && rerouted.leg === leg ? rerouted.sweep : legOverride ? null : from;
 
   // Small graphs (tens to a few thousand sweeps); the React Compiler memoizes this render.
   const plan = planLeg({
@@ -108,41 +110,55 @@ export function ResponderRoute({
   const step = current.step;
   const fly = current.fly;
 
-  // Follow the phone: on by default when the link carries the calibration; Back / Next pause it.
+  // Follow the helper: on by default; Back / Next pause it. Positions come from the app's dot (step
+  // tracking, over Realtime) or, until a dot arrives, the phone's GPS. Each one goes to the scan point
+  // nearest the helper on the leg's floor: along the path when it is on it, else the leg is re-planned
+  // from there, so the view is always where the helper is.
   const [following, setFollowing] = useState(true);
   const [gps, setGps] = useState<"on" | "denied" | "error" | null>(null);
   // True once the app's dot arrives; then it drives the view and GPS is not used.
   const [streaming, setStreaming] = useState(false);
   const byId = useMemo(() => new Map(data.nodes.map((n) => [n.sweep_id, n])), [data.nodes]);
+  const endSweep = leg === "to_aed" ? aedSweep : personSweep;
+  // Scan points a position can snap to: the leg's floor, able to reach the leg's end (memoized by the compiler).
+  const endNode = endSweep ? byId.get(endSweep) : undefined;
+  const reach = endNode ? reachableTo(data.nodes, endNode.sweep_id) : null;
+  const candidates = endNode && reach ? data.nodes.filter((n) => n.floor === endNode.floor && reach.has(n.sweep_id)) : [];
+  const live = useRef<(p: { x: number; z: number }, appLeg?: unknown) => void>(() => {});
+  useEffect(() => {
+    live.current = (p, appLeg) => {
+      if ((appLeg === "to_aed" || appLeg === "to_person") && appLeg !== leg) {
+        setLegOverride(appLeg); // the app moved on (for example "I have the AED"); the next position moves the view
+        return;
+      }
+      if (!following || !planKey) return;
+      const path = plan.path;
+      const decision = followStep({ path, byId, candidates, at: step, p });
+      if (!decision) return;
+      if (decision.kind === "reroute") {
+        setRerouted({ leg, sweep: decision.sweep }); // a new path; the view goes to its first point
+        return;
+      }
+      const i = decision.index;
+      setNav((n) => ({ plan: planKey, step: i, fly: { path: [path[i]], key: -(n.seq + 1) }, seq: n.seq + 1 }));
+    };
+  });
+
   const geoKey = geo ? `${geo.originLat},${geo.originLng},${geo.rotationDeg},${geo.tx},${geo.tz}` : "";
   useEffect(() => {
-    if (!geo || !following || streaming || !planKey || typeof navigator === "undefined" || !navigator.geolocation) return;
-    const path = planKey.split(">");
+    if (!geo || !following || streaming || typeof navigator === "undefined" || !navigator.geolocation) return;
     const watch = navigator.geolocation.watchPosition(
       (pos) => {
         setGps("on");
-        const p = latLngToPlan(geo, { lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setNav((n) => {
-          const cur = n.plan === planKey ? n.step : 0;
-          const i = nearestPathIndex(path, byId, p);
-          // Move only to a point at least 1 m closer than the current one, so jitter does not flip the view.
-          if (i < 0 || i === cur || distanceToPathPoint(path, byId, i, p) + 1 > distanceToPathPoint(path, byId, cur, p)) return n;
-          return { plan: planKey, step: i, fly: { path: [path[i]], key: -(n.seq + 1) }, seq: n.seq + 1 };
-        });
+        live.current(latLngToPlan(geo, { lat: pos.coords.latitude, lng: pos.coords.longitude }));
       },
       (err) => setGps(err.code === err.PERMISSION_DENIED ? "denied" : "error"),
       { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
     );
     return () => navigator.geolocation.clearWatch(watch);
-    // geoKey stands for geo; planKey for the path.
-  }, [geoKey, following, streaming, planKey, byId]); // eslint-disable-line react-hooks/exhaustive-deps
+    // geoKey stands for geo.
+  }, [geoKey, following, streaming]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // The app's dot. The channel stays open for the whole page; the handler reads the current leg and
-  // path from refs so a leg change does not resubscribe.
-  const live = useRef({ planKey, leg, following });
-  useEffect(() => {
-    live.current = { planKey, leg, following };
-  }, [planKey, leg, following]);
   useEffect(() => {
     const db = getSupabase();
     if (!db || !followId) return;
@@ -152,27 +168,13 @@ export function ResponderRoute({
         const msg = payload as { x?: unknown; z?: unknown; leg?: unknown };
         if (typeof msg.x !== "number" || typeof msg.z !== "number") return;
         setStreaming(true);
-        const cur = live.current;
-        if ((msg.leg === "to_aed" || msg.leg === "to_person") && msg.leg !== cur.leg) {
-          setLegOverride(msg.leg); // the app moved on (for example "I have the AED"); the next dot moves the view
-          return;
-        }
-        if (!cur.following || !cur.planKey) return;
-        const path = cur.planKey.split(">");
-        const p = { x: msg.x, z: msg.z };
-        const key = cur.planKey;
-        setNav((n) => {
-          const at = n.plan === key ? n.step : 0;
-          const i = nearestPathIndex(path, byId, p);
-          if (i < 0 || i === at || distanceToPathPoint(path, byId, i, p) + 1 > distanceToPathPoint(path, byId, at, p)) return n;
-          return { plan: key, step: i, fly: { path: [path[i]], key: -(n.seq + 1) }, seq: n.seq + 1 };
-        });
+        live.current({ x: msg.x, z: msg.z }, msg.leg);
       })
       .subscribe();
     return () => {
       void db.removeChannel(channel);
     };
-  }, [followId, byId]);
+  }, [followId]);
 
   const goTo = (i: number) => {
     setFollowing(false);

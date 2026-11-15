@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cleanLeg, cleanSweepId, pathMeters, planLeg, shortestSweepPath, spokenMeters, type RouteNode } from "@/lib/routePlan";
+import { cleanLeg, cleanSweepId, followStep, pathMeters, planLeg, reachableTo, shortestSweepPath, spokenMeters, type RouteNode } from "@/lib/routePlan";
 
 // A small corridor: p (person) - a - b - d (AED), with a slower detour p - c - d.
 const nodes: RouteNode[] = [
@@ -85,5 +85,29 @@ describe("spokenMeters", () => {
     expect(spokenMeters(14.51)).toBe(15);
     expect(spokenMeters(14.49)).toBe(14);
     expect(spokenMeters(0)).toBe(0);
+  });
+});
+
+describe("followStep", () => {
+  const byId = new Map(nodes.map((n) => [n.sweep_id, n]));
+  const candidates = nodes.filter((n) => n.sweep_id !== "island");
+  const path = ["p", "a", "b", "d"];
+
+  it("moves along the path when the helper is nearest a path point", () => {
+    expect(followStep({ path, byId, candidates, at: 0, p: { x: 6.2, z: 0.3 } })).toEqual({ kind: "move", index: 2 });
+  });
+
+  it("re-plans from the helper's own spot when it is off the path", () => {
+    expect(followStep({ path, byId, candidates, at: 0, p: { x: 4.4, z: 5.8 } })).toEqual({ kind: "reroute", sweep: "c" });
+  });
+
+  it("ignores small moves and staying put", () => {
+    expect(followStep({ path, byId, candidates, at: 1, p: { x: 3.2, z: 0 } })).toBeNull();
+    expect(followStep({ path, byId, candidates, at: 1, p: { x: 4.4, z: 0 } })).toBeNull(); // b is not 1 m closer than a
+  });
+
+  it("finds the sweeps that can reach the target", () => {
+    expect([...reachableTo(nodes, "d")].sort()).toEqual(["a", "b", "c", "d", "p", "unplaced"]);
+    expect([...reachableTo(nodes, "island")]).toEqual(["island"]);
   });
 });
