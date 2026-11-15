@@ -51,6 +51,27 @@ The spec's rule is that only real numbers from our runs reach the UI, slides or 
 | S4 | Confirm the live path reads routes built from simulated assets; nothing in the 911 briefing or handoff card presents it as a detected device | Agent 4 |
 | S5 | Team picks the live demo building and the sweep for its planted AED and for `cam-lobby-1` | people |
 
+## 2a. Live demo building (chosen 2026-11-14)
+
+**Princeton, Rabinowitz Hall.** Matterport model `P3S6VUTP3qB` (the older public copy `2K7G7cdukZV` is not reachable through the API; see `demo/PLANTED_AED.md`). This answers S5's building choice; the sweeps are still to pick.
+
+What follows from that choice:
+
+- **It is not a census building.** It is in Princeton, not Houston or LA, and has no CoStar record. Load it with `costar_property_id = 'DEMO-RABINOWITZ'` and `city = 'Princeton'`, and exclude the `DEMO-` prefix from the headline, rankings and `report` the same way `FALLBACK-` is excluded today. The census "N buildings" never includes it.
+- **Prefer the real AED over a planted one.** If the team is in or near the building, find its actual AED, extinguishers and exits and enter them at their true sweeps as `source='manual'`, verified in person. Then the live demo uses a real device location and nothing in it is simulated. Plant a `simulated` AED only if no real one can be located.
+- **No Vexcel data is expected for it.** The EMS door is entered by hand from the real entrance, marked as manually chosen.
+- **The scan contains people.** If the Scanner runs on it, the no-face-crops rule applies in full; check the stored crops by eye.
+- **Loading needs a new path.** There is no dataset record, so the sweep graph (positions, neighbors, floors) has to come from the Matterport SDK for this one model. Needs `MATTERPORT_SDK_KEY`.
+
+| # | To-do | Owner |
+|---|---|---|
+| D1 | Export the sweep graph for `P3S6VUTP3qB` through the Matterport Model API into the fallback-building JSON format (`demo/rabinowitz/building.json`); load it with the existing loader | Agent 1 |
+| D2 | `DEMO-` prefix excluded from headline, rank and report | Agent 2 |
+| D3 | Walk the building: note the real AED, extinguishers, exits and the best ambulance entrance, each matched to a sweep in the model | people |
+| D4 | Pick the camera position: the sweep for `cam-lobby-1` and a landmark a stranger would recognize (replaces the placeholder "east elevators") | people |
+| D5 | Enter D3 and D4 into `demo/rabinowitz/building.json`; rerun the census on it; precompute routes and audio | Agent 1 + 2 |
+| D6 | Dashboard twin embed pointed at this model; check the fly-through to the AED | Agent 3 |
+
 ## 3. First integration pass (as soon as P1 and P2 are done)
 
 In this order, fixing what breaks before moving on:
