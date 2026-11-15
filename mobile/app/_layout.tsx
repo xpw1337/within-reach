@@ -1,3 +1,10 @@
+import {
+  Nunito_600SemiBold,
+  Nunito_700Bold,
+  Nunito_800ExtraBold,
+  Nunito_900Black,
+  useFonts,
+} from '@expo-google-fonts/nunito';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
@@ -11,6 +18,8 @@ import { useDispatchWatcher } from '../lib/useDispatches';
 
 export default function RootLayout() {
   const { ready, profile } = useProfile();
+  // Nunito (the redesign's face). A font that fails to load falls back to the system font.
+  const [fontsLoaded, fontError] = useFonts({ Nunito_600SemiBold, Nunito_700Bold, Nunito_800ExtraBold, Nunito_900Black });
 
   useEffect(() => {
     void loadProfile();
@@ -20,10 +29,10 @@ export default function RootLayout() {
   useLocationReporter(profile?.id ?? null, Boolean(profile?.on_duty && profile?.consent_location));
   useDispatchWatcher(profile?.id ?? null);
 
-  if (!ready) {
+  if (!ready || (!fontsLoaded && !fontError)) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator />
+        <ActivityIndicator color={colors.red} />
       </View>
     );
   }

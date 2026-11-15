@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
@@ -13,7 +14,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { colors, space } from './theme';
+import { colors, font, radius, space, type } from './theme';
+
+// The look of the sos/phone-app redesign (white, Red Cross red, Nunito, chunky buttons with a solid
+// bottom edge), applied to this app's own components: same names, props and behavior as before.
 
 export function Screen({ children, background = colors.bg }: { children: ReactNode; background?: string }) {
   return (
@@ -43,6 +47,16 @@ export function Label({ children }: { children: ReactNode }) {
 
 type ButtonKind = 'primary' | 'secondary' | 'danger' | 'ok';
 
+// bg, darker bottom edge, text color, and an outline for the light button.
+const BUTTON: Record<ButtonKind, { bg: string; edge: string; fg: string; border?: string }> = {
+  primary: { bg: colors.red, edge: colors.redDark, fg: colors.white },
+  ok: { bg: colors.green, edge: colors.greenDark, fg: colors.white },
+  danger: { bg: colors.ink, edge: '#000000', fg: colors.white },
+  secondary: { bg: colors.white, edge: colors.line, fg: colors.ink, border: colors.line },
+};
+const EDGE = 4;
+
+/** Chunky button with a solid bottom edge that presses down. */
 export function Button({
   title,
   onPress,
@@ -58,24 +72,33 @@ export function Button({
   busy?: boolean;
   big?: boolean;
 }) {
-  const bg =
-    kind === 'primary' ? colors.primary : kind === 'ok' ? colors.ok : kind === 'danger' ? colors.text : colors.card;
-  const fg = kind === 'secondary' ? colors.text : colors.primaryText;
+  const c = BUTTON[kind];
   const isDisabled = disabled || busy;
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ disabled: !!isDisabled, busy: !!busy }}
+      onPressIn={() => void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})}
       onPress={onPress}
       disabled={isDisabled}
       style={({ pressed }) => [
         styles.button,
         big && styles.buttonBig,
-        { backgroundColor: bg, opacity: isDisabled ? 0.5 : pressed ? 0.8 : 1 },
-        kind === 'secondary' && styles.buttonSecondary,
+        {
+          backgroundColor: c.bg,
+          borderColor: c.border ?? c.bg,
+          borderBottomColor: c.edge,
+          borderBottomWidth: pressed ? 2 : EDGE + (c.border ? 2 : 0),
+          marginTop: pressed ? EDGE - 2 : 0,
+          opacity: isDisabled ? 0.45 : 1,
+        },
       ]}
     >
-      {busy ? <ActivityIndicator color={fg} /> : <Text style={[styles.buttonText, big && styles.buttonTextBig, { color: fg }]}>{title}</Text>}
+      {busy ? (
+        <ActivityIndicator color={c.fg} />
+      ) : (
+        <Text style={[styles.buttonText, big && styles.buttonTextBig, { color: c.fg }]}>{title}</Text>
+      )}
     </Pressable>
   );
 }
@@ -84,7 +107,7 @@ export function Field({ label, ...props }: { label: string } & TextInputProps) {
   return (
     <View style={styles.field}>
       <Label>{label}</Label>
-      <TextInput placeholderTextColor={colors.muted} style={styles.input} {...props} />
+      <TextInput placeholderTextColor={colors.faint} style={styles.input} {...props} />
     </View>
   );
 }
@@ -105,7 +128,7 @@ export function ToggleRow({
   return (
     <View style={styles.toggleRow}>
       <View style={styles.flex}>
-        <Text style={styles.body}>{label}</Text>
+        <Text style={styles.toggleLabel}>{label}</Text>
         {help ? <Text style={styles.help}>{help}</Text> : null}
       </View>
       <Switch
@@ -113,7 +136,7 @@ export function ToggleRow({
         value={value}
         onValueChange={onValueChange}
         disabled={disabled}
-        trackColor={{ true: colors.ok, false: colors.border }}
+        trackColor={{ true: colors.green, false: colors.line }}
       />
     </View>
   );
@@ -149,63 +172,73 @@ export function Segmented<T extends string>({
 }
 
 export function Notice({ children, tone = 'warn' }: { children: ReactNode; tone?: 'warn' | 'info' | 'error' }) {
-  const color = tone === 'info' ? colors.info : tone === 'error' ? colors.primary : colors.warn;
+  const t =
+    tone === 'info'
+      ? { bg: colors.blueSoft, accent: colors.blue }
+      : tone === 'error'
+        ? { bg: colors.redSoft, accent: colors.red }
+        : { bg: colors.orangeSoft, accent: colors.orangeDark };
   return (
-    <View style={[styles.notice, { borderColor: color }]}>
-      <Text style={[styles.body, { color }]}>{children}</Text>
+    <View style={[styles.notice, { backgroundColor: t.bg }]}>
+      <View style={[styles.noticeDot, { backgroundColor: t.accent }]} />
+      <Text style={styles.noticeText}>{children}</Text>
     </View>
   );
 }
 
 export const styles = StyleSheet.create({
   flex: { flex: 1 },
-  screen: { padding: space.lg, gap: space.lg, paddingBottom: space.xl * 2 },
-  title: { fontSize: 28, fontWeight: '700' },
-  body: { fontSize: 16, lineHeight: 22 },
-  help: { fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 },
-  label: { fontSize: 13, fontWeight: '600', color: colors.muted, textTransform: 'uppercase', letterSpacing: 0.5 },
+  screen: { padding: space.xl, gap: space.lg, paddingBottom: space.xl * 2 },
+  title: { ...type.title },
+  body: { ...type.body },
+  help: { ...type.small, marginTop: 2 },
+  label: { ...type.label },
   card: {
-    backgroundColor: colors.card,
-    borderRadius: 14,
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    borderColor: colors.line,
     padding: space.lg,
     gap: space.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.border,
   },
   button: {
-    minHeight: 52,
-    borderRadius: 12,
+    minHeight: 58,
+    borderRadius: radius.md,
+    borderWidth: 2,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: space.lg,
+    paddingHorizontal: space.xl,
   },
-  buttonBig: { minHeight: 72 },
-  buttonSecondary: { borderWidth: 1, borderColor: colors.border },
-  buttonText: { fontSize: 17, fontWeight: '700' },
-  buttonTextBig: { fontSize: 22 },
-  field: { gap: space.xs },
+  buttonBig: { minHeight: 76 },
+  buttonText: { fontFamily: font.heavy, fontSize: 17, letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
+  buttonTextBig: { fontSize: 21 },
+  field: { gap: space.sm },
   input: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 10,
-    paddingHorizontal: space.md,
-    paddingVertical: space.md,
-    fontSize: 17,
-    color: colors.text,
-    backgroundColor: colors.card,
+    fontFamily: font.bold,
+    fontSize: 19,
+    color: colors.ink,
+    backgroundColor: colors.surface,
+    borderWidth: 2,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    paddingHorizontal: space.lg,
+    paddingVertical: 14,
   },
   toggleRow: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  toggleLabel: { ...type.body, fontFamily: font.bold },
   segmented: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   segment: {
     paddingVertical: space.sm,
-    paddingHorizontal: space.md,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
+    paddingHorizontal: space.lg,
+    borderRadius: radius.pill,
+    borderWidth: 2,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
   },
-  segmentSelected: { backgroundColor: colors.text, borderColor: colors.text },
-  segmentText: { fontSize: 15, color: colors.text },
-  segmentTextSelected: { color: colors.primaryText, fontWeight: '700' },
-  notice: { borderLeftWidth: 4, paddingLeft: space.md, paddingVertical: space.xs },
+  segmentSelected: { backgroundColor: colors.red, borderColor: colors.red },
+  segmentText: { fontFamily: font.bold, fontSize: 15, color: colors.ink },
+  segmentTextSelected: { color: colors.white, fontFamily: font.heavy },
+  notice: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start', padding: space.md, borderRadius: radius.md },
+  noticeDot: { width: 8, height: 8, borderRadius: 4, marginTop: 7 },
+  noticeText: { ...type.small, color: colors.ink, flex: 1 },
 });

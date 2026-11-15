@@ -49,7 +49,8 @@
         {
           "motionPermission": "Used to move your position on the indoor map as you walk during an emergency response."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
