@@ -140,7 +140,10 @@ def _candidates(cfg: RunConfig) -> list[str]:
     if cfg.building_ids:
         return list(cfg.building_ids)
     filters = [("eq", "city", cfg.city)] if cfg.city else []
-    rows = db.fetch_all("buildings", columns="id,property_type,census_status", filters=filters)
+    rows = db.fetch_all("buildings", columns="id,costar_property_id,property_type,census_status",
+                        filters=filters)
+    # Fixtures and demo venues only run when named (rerun); never in a census run's candidates.
+    rows = [r for r in rows if not records.is_fixture(r)]
     if cfg.types:
         wanted = [t.lower() for t in cfg.types]
         rows = [r for r in rows if any(w in (r.get("property_type") or "").lower() for w in wanted)]

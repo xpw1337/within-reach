@@ -38,6 +38,14 @@ def not_connected_phrase(n: int) -> str:
         return ""
     return f"{n} position{'s' if n != 1 else ''} not connected in the scan {'were' if n != 1 else 'was'} left out."
 BLOCKED_EXIT_FLAG = "blocked_exit"
+# A disclosed demo prop placed by the team (demo/PLANTED_AED.md). It feeds this building's own
+# walking-time maps and camera routes, but documents never present it as found in the scan, and
+# the building it sits in is a demo venue excluded from every census number by its id prefix.
+SIMULATED_FLAG = "simulated"
+
+
+def is_simulated(asset: dict) -> bool:
+    return SIMULATED_FLAG in (asset.get("flags") or [])
 
 
 class MapperError(RuntimeError):
@@ -147,6 +155,11 @@ def _walking_time_map(loaded: LoadedBuilding, asset_type: str) -> dict:
                    f"{pct(stats.red_frac)} of connected scanned positions are red.")
         if stats.unreachable:
             message += " " + not_connected_phrase(stats.unreachable)
+        demo = sum(1 for a in loaded.assets
+                   if is_simulated(a) and a.get("type") in SOURCE_ASSET_TYPES[asset_type])
+        if demo:
+            message += (f" This map uses {demo} demo {name}{'s' if demo != 1 else ''} placed by the team, "
+                        "not found in the scan.")
     metrics = {"asset_type": asset_type, "sources": len(sources), "rows": rows,
                "limit_one_way_s": limit, **stats.as_dict()}
     result(AGENT, "walking_time_map", message, building_id, metrics)

@@ -1,6 +1,7 @@
 """Normalize dataset adapter output into ``buildings``, ``twin_nodes`` and ``panos`` (spec section 9.1).
 
     python -m data.load --fallback
+    python -m data.load --file demo/rabinowitz/building.json
     python -m data.load --city Houston --types gym,office --limit 100
     python -m data.load --ids <costar_property_id> ...
 
@@ -13,7 +14,7 @@ where to fetch each one and ``fetch_pano`` downloads lazily.
 Normalization: neighbors made symmetric (the fix count is logged), unknown and self neighbors
 dropped, floors forced to integers (clustered from ``y`` when missing), stairs and elevators set
 from room types and labels, and as a last resort stairs inferred from edges that change floor.
-With ``--fallback`` the fixture's ``assets`` and ``cameras`` rows are written too.
+With ``--fallback`` or ``--file`` the file's ``assets`` and ``cameras`` rows are written too.
 """
 
 from __future__ import annotations
@@ -307,8 +308,14 @@ def load(
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m data.load", description=__doc__.split("\n")[0])
-    ap.add_argument(
+    src = ap.add_mutually_exclusive_group()
+    src.add_argument(
         "--fallback", action="store_true", help="load demo/fallback/building.json with its assets and camera"
+    )
+    src.add_argument(
+        "--file",
+        help="load one building file in the fallback format (CONTRACTS section 7) with its assets and "
+        "camera, for example demo/rabinowitz/building.json",
     )
     ap.add_argument("--city", help="Houston | Los Angeles")
     ap.add_argument("--types", help="comma-separated property types, e.g. gym,office")
@@ -317,15 +324,16 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
-    if args.fallback:
-        from data.fallback import FallbackAdapter
+    from_file = bool(args.fallback or args.file)
+    if from_file:
+        from data.fallback import FALLBACK_PATH, FallbackAdapter
 
-        adapter: DatasetAdapter = FallbackAdapter()
+        adapter: DatasetAdapter = FallbackAdapter(args.file or FALLBACK_PATH)
     else:
         adapter = get_adapter()
     types = [t.strip() for t in args.types.split(",")] if args.types else None
     summaries = load(
-        adapter, city=args.city, types=types, ids=args.ids, limit=args.limit, with_fixture_rows=args.fallback
+        adapter, city=args.city, types=types, ids=args.ids, limit=args.limit, with_fixture_rows=from_file
     )
     for s in summaries:
         print(

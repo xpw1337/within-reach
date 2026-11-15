@@ -1,0 +1,1148 @@
+{
+  "_note": "Live demo building, exported from the Matterport Model API by data/matterport.py. Not a CoStar building and never part of a census number (costar_property_id starts with DEMO-). The AED is a disclosed demo prop placed by the team (flag 'simulated'), not found in the scan. Address and lat/lng come from the Model API; size, type and tenants are unknown. Positions are y-up (Model API z-up converted as (x, z, -y)). Edges are walkable links derived from line-of-sight neighbors: same floor within the cutoff, floors joined only through stair sweeps. Panoramas are not stored.",
+  "_edges": {
+    "max_edge_m": 6.0,
+    "line_of_sight_pairs": 806,
+    "cross_floor_line_of_sight_pairs": 210,
+    "same_floor_edges": 117,
+    "stair_edges": 2,
+    "stair_sweeps": [
+      "b8ckm0ge7yzdxbq0f5tkeswyd"
+    ]
+  },
+  "building": {
+    "costar_property_id": "DEMO-RABINOWITZ",
+    "name": "Julis Romo Rabinowitz Building",
+    "city": "Princeton",
+    "matterport_model_id": "P3S6VUTP3qB",
+    "address": "Princeton, NJ 08544",
+    "lat": 40.34908933610458,
+    "lng": -74.65546592669608,
+    "property_type": null,
+    "floors": null,
+    "size_sqft": null,
+    "tenants_count": null
+  },
+  "twin_nodes": [
+    {
+      "sweep_id": "da9quipa0a6ny84ky8e6s3ptb",
+      "floor": 2,
+      "x": -8.6035,
+      "y": -0.0019,
+      "z": 3.8367,
+      "neighbors": [
+        "0f2a2fyf5iibscursb5gkyu9a",
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "g28dnxza8f193q5nzhdaxf2hd",
+        "n0ppizy9u8xcadypd2bawceyc",
+        "pr6uqwurqfw4xg6ghnx2q1zmb",
+        "qf5w019hhy47ybsiu9fyu43kd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "g28dnxza8f193q5nzhdaxf2hd",
+      "floor": 2,
+      "x": -4.6265,
+      "y": -0.0073,
+      "z": 0.3476,
+      "neighbors": [
+        "1k478kza39tbfu1uhbttg5ybb",
+        "da9quipa0a6ny84ky8e6s3ptb",
+        "ed5xxn70mz1xe5q15ts4fqcpa",
+        "qf5w019hhy47ybsiu9fyu43kd",
+        "qu4unpew77rnmdcas4c9npyzc",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "gaxq605gdd559tf073aubympc",
+      "floor": 2,
+      "x": 2.6414,
+      "y": -0.0135,
+      "z": 13.4561,
+      "neighbors": [
+        "thaxyfyip9r71h69gkck885aa"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "haipxtu4fuppeii5f8iik4btc",
+      "floor": 3,
+      "x": -8.1197,
+      "y": 3.9493,
+      "z": 13.2862,
+      "neighbors": [
+        "3ny35zcnrdiw2ham0z1sptyqd",
+        "9f45hxprghib9bgxnzkd87f6b",
+        "rfuwtwdh07qm2ct0m04b3sb2a"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "ht0bbyeyc69qwxm7did6ycbuc",
+      "floor": 2,
+      "x": 11.368,
+      "y": -0.0057,
+      "z": -3.943,
+      "neighbors": [
+        "2yy18y2trz8tgisf5r9s1tfpc",
+        "81tg3n7bd96pyfp31pzd7mada",
+        "8h1u5sb6x8sabzcssd91exwna"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "panr3bktyzufic6e6xb4mtuub",
+      "floor": 2,
+      "x": 12.1022,
+      "y": -0.0106,
+      "z": 12.2748,
+      "neighbors": [
+        "2qe44cteny5g297zquh4gpgcd",
+        "684rbi72ft03adydwabgicmpb",
+        "thaxyfyip9r71h69gkck885aa"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "akkrtige2btw2mmn2ghr2z9za",
+      "floor": 3,
+      "x": -8.2329,
+      "y": 3.9582,
+      "z": 4.2441,
+      "neighbors": [
+        "3ny35zcnrdiw2ham0z1sptyqd",
+        "6hxpxut4nuzsug4625z1dk7bd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "duhb1en75fgewsniip8byupza",
+      "floor": 2,
+      "x": -0.5045,
+      "y": -0.0165,
+      "z": 6.1024,
+      "neighbors": [
+        "36aa2eubht8idy9kr2k8aubac",
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "az0h181td1h01x8x9gxhnp47a",
+        "b8ckm0ge7yzdxbq0f5tkeswyd",
+        "e9e4rxumug0x0dz4xyhgenakd",
+        "qf5w019hhy47ybsiu9fyu43kd",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "mk5198wdpzeqzp73ese8h4pbb",
+      "floor": 3,
+      "x": 2.7792,
+      "y": 3.9707,
+      "z": 6.2498,
+      "neighbors": [
+        "2eum01wmtxcin1q8grtnmc0ra",
+        "bd3dzdmm4w3twrznh1ydgfq8b"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "qu4unpew77rnmdcas4c9npyzc",
+      "floor": 2,
+      "x": -4.8321,
+      "y": -0.0101,
+      "z": -2.3422,
+      "neighbors": [
+        "1k478kza39tbfu1uhbttg5ybb",
+        "ed5xxn70mz1xe5q15ts4fqcpa",
+        "g28dnxza8f193q5nzhdaxf2hd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "ubrr49s35m2uxuy9y5rwh74sb",
+      "floor": 3,
+      "x": 13.8886,
+      "y": 4.106,
+      "z": 7.947,
+      "neighbors": [
+        "0nunhdpcx0wq1xc8umazai0fd",
+        "8cnnit59dnzb02y2nekixp6hc",
+        "9xmtamt4c9trdkf242ttr6dwb",
+        "s959dys4uwha3mmrpkf6c5ddc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "1k478kza39tbfu1uhbttg5ybb",
+      "floor": 2,
+      "x": 0.0113,
+      "y": -0.0272,
+      "z": -0.0132,
+      "neighbors": [
+        "1gmnh1czf97m0y4s6119pfs1d",
+        "28b2c48p1q2tgni83r5qkdc2b",
+        "az0h181td1h01x8x9gxhnp47a",
+        "g28dnxza8f193q5nzhdaxf2hd",
+        "h13rg3tuxedbm5zzknqadu73b",
+        "qf5w019hhy47ybsiu9fyu43kd",
+        "qu4unpew77rnmdcas4c9npyzc",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": "central atrium",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "umf4kucuf8hn4ipb9az044yxc",
+      "floor": 2,
+      "x": 13.6151,
+      "y": -0.0246,
+      "z": 4.1112,
+      "neighbors": [
+        "2yy18y2trz8tgisf5r9s1tfpc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "8c32s7nkt2849ty7f2xzdunda",
+      "floor": 3,
+      "x": 13.7734,
+      "y": 4.1014,
+      "z": -0.1004,
+      "neighbors": [
+        "0nunhdpcx0wq1xc8umazai0fd",
+        "4z3dsh3hzihrqcr8fsxqdkf6c",
+        "c9t63yrk0m9rmufcmnebs24zb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "8cnnit59dnzb02y2nekixp6hc",
+      "floor": 3,
+      "x": 8.8408,
+      "y": 3.9704,
+      "z": 9.9634,
+      "neighbors": [
+        "3xprhtpgyi8tqttrrqhmghw6b",
+        "85ekq5i5e02pxxe0se65sr5sc",
+        "9xmtamt4c9trdkf242ttr6dwb",
+        "bd3dzdmm4w3twrznh1ydgfq8b",
+        "t9wqkieqytkbx8egqum168w6b",
+        "ubrr49s35m2uxuy9y5rwh74sb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "bd3dzdmm4w3twrznh1ydgfq8b",
+      "floor": 3,
+      "x": 8.033,
+      "y": 3.9587,
+      "z": 6.0943,
+      "neighbors": [
+        "85ekq5i5e02pxxe0se65sr5sc",
+        "8cnnit59dnzb02y2nekixp6hc",
+        "mk5198wdpzeqzp73ese8h4pbb",
+        "wd46bmmxqkzpyw35raqsdx2db"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "ed5xxn70mz1xe5q15ts4fqcpa",
+      "floor": 2,
+      "x": -4.5361,
+      "y": -0.0091,
+      "z": -5.4131,
+      "neighbors": [
+        "g28dnxza8f193q5nzhdaxf2hd",
+        "qu4unpew77rnmdcas4c9npyzc",
+        "yfn0c6232s1yxzgxqmqw7n6zb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "m50u46kpe0src2rqk6xmmri5d",
+      "floor": 2,
+      "x": -10.8811,
+      "y": -0.0026,
+      "z": 11.2176,
+      "neighbors": [
+        "5yqp8itw3r5s4iw3kuf4nqdsc",
+        "pr6uqwurqfw4xg6ghnx2q1zmb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "r5cp1eut86x1rc9yepd4ysxwd",
+      "floor": 2,
+      "x": -6.5835,
+      "y": 0.0104,
+      "z": 9.5355,
+      "neighbors": [
+        "36aa2eubht8idy9kr2k8aubac",
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "gprsw6xcqigh6reqseh3rmcrc",
+        "pr6uqwurqfw4xg6ghnx2q1zmb",
+        "w5kacr4ci0d92c5wkzrfs4erd",
+        "xq7dhrun14q0789iwk5epwtkb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "w5kacr4ci0d92c5wkzrfs4erd",
+      "floor": 2,
+      "x": -8.0399,
+      "y": -0.0015,
+      "z": 13.0499,
+      "neighbors": [
+        "5yqp8itw3r5s4iw3kuf4nqdsc",
+        "r5cp1eut86x1rc9yepd4ysxwd",
+        "xq7dhrun14q0789iwk5epwtkb"
+      ],
+      "room_type": null,
+      "label": "corridor wing",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "wd46bmmxqkzpyw35raqsdx2db",
+      "floor": 3,
+      "x": 8.245,
+      "y": 3.9743,
+      "z": 1.005,
+      "neighbors": [
+        "2eum01wmtxcin1q8grtnmc0ra",
+        "bd3dzdmm4w3twrznh1ydgfq8b"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "xdym22pw82n1ius7pazhttd1a",
+      "floor": 3,
+      "x": 9.6687,
+      "y": 3.9361,
+      "z": -2.562,
+      "neighbors": [
+        "4z3dsh3hzihrqcr8fsxqdkf6c",
+        "c9t63yrk0m9rmufcmnebs24zb",
+        "f7ryu7kyugtp7bx4dm3qa1dec",
+        "p8q154uncpnbn9zz3pf0utc1d"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "0nunhdpcx0wq1xc8umazai0fd",
+      "floor": 3,
+      "x": 13.8477,
+      "y": 4.0943,
+      "z": 4.0077,
+      "neighbors": [
+        "8c32s7nkt2849ty7f2xzdunda",
+        "ubrr49s35m2uxuy9y5rwh74sb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "3ny35zcnrdiw2ham0z1sptyqd",
+      "floor": 3,
+      "x": -7.5908,
+      "y": 3.9671,
+      "z": 7.4486,
+      "neighbors": [
+        "9f45hxprghib9bgxnzkd87f6b",
+        "akkrtige2btw2mmn2ghr2z9za",
+        "haipxtu4fuppeii5f8iik4btc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "3xprhtpgyi8tqttrrqhmghw6b",
+      "floor": 3,
+      "x": 6.2703,
+      "y": 3.962,
+      "z": 9.0666,
+      "neighbors": [
+        "85ekq5i5e02pxxe0se65sr5sc",
+        "8cnnit59dnzb02y2nekixp6hc",
+        "t9wqkieqytkbx8egqum168w6b"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "7dsusre8f794uicd3gsb1q5yd",
+      "floor": 3,
+      "x": -7.6131,
+      "y": 3.977,
+      "z": -2.161,
+      "neighbors": [
+        "6hxpxut4nuzsug4625z1dk7bd",
+        "eqpgxz0sb38saf4rcuxng6uud",
+        "y8rya39xwbarmpmfakn2qaimc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "85ekq5i5e02pxxe0se65sr5sc",
+      "floor": 3,
+      "x": 8.9233,
+      "y": 3.959,
+      "z": 7.8135,
+      "neighbors": [
+        "3xprhtpgyi8tqttrrqhmghw6b",
+        "8cnnit59dnzb02y2nekixp6hc",
+        "9xmtamt4c9trdkf242ttr6dwb",
+        "bd3dzdmm4w3twrznh1ydgfq8b",
+        "t9wqkieqytkbx8egqum168w6b"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "9xmtamt4c9trdkf242ttr6dwb",
+      "floor": 3,
+      "x": 11.9113,
+      "y": 4.0926,
+      "z": 12.4453,
+      "neighbors": [
+        "85ekq5i5e02pxxe0se65sr5sc",
+        "8cnnit59dnzb02y2nekixp6hc",
+        "s959dys4uwha3mmrpkf6c5ddc",
+        "t9wqkieqytkbx8egqum168w6b",
+        "ubrr49s35m2uxuy9y5rwh74sb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "a6ce5xzf6mf48hy21cmu3q3ma",
+      "floor": 2,
+      "x": -4.555,
+      "y": -0.0002,
+      "z": 7.3581,
+      "neighbors": [
+        "36aa2eubht8idy9kr2k8aubac",
+        "da9quipa0a6ny84ky8e6s3ptb",
+        "duhb1en75fgewsniip8byupza",
+        "gprsw6xcqigh6reqseh3rmcrc",
+        "qf5w019hhy47ybsiu9fyu43kd",
+        "r5cp1eut86x1rc9yepd4ysxwd",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "gprsw6xcqigh6reqseh3rmcrc",
+      "floor": 2,
+      "x": -5.3709,
+      "y": 0.0084,
+      "z": 9.9925,
+      "neighbors": [
+        "36aa2eubht8idy9kr2k8aubac",
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "pr6uqwurqfw4xg6ghnx2q1zmb",
+        "r5cp1eut86x1rc9yepd4ysxwd",
+        "xq7dhrun14q0789iwk5epwtkb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "2yy18y2trz8tgisf5r9s1tfpc",
+      "floor": 2,
+      "x": 13.2841,
+      "y": -0.0044,
+      "z": -0.8779,
+      "neighbors": [
+        "81tg3n7bd96pyfp31pzd7mada",
+        "ht0bbyeyc69qwxm7did6ycbuc",
+        "umf4kucuf8hn4ipb9az044yxc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "2eum01wmtxcin1q8grtnmc0ra",
+      "floor": 3,
+      "x": 2.8118,
+      "y": 3.9694,
+      "z": 1.4041,
+      "neighbors": [
+        "mk5198wdpzeqzp73ese8h4pbb",
+        "wd46bmmxqkzpyw35raqsdx2db"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "36aa2eubht8idy9kr2k8aubac",
+      "floor": 2,
+      "x": -3.4332,
+      "y": 0.0013,
+      "z": 9.9238,
+      "neighbors": [
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "duhb1en75fgewsniip8byupza",
+        "gprsw6xcqigh6reqseh3rmcrc",
+        "r5cp1eut86x1rc9yepd4ysxwd",
+        "xq7dhrun14q0789iwk5epwtkb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "5yqp8itw3r5s4iw3kuf4nqdsc",
+      "floor": 2,
+      "x": -10.834,
+      "y": -0.0034,
+      "z": 13.5721,
+      "neighbors": [
+        "m50u46kpe0src2rqk6xmmri5d",
+        "pr6uqwurqfw4xg6ghnx2q1zmb",
+        "w5kacr4ci0d92c5wkzrfs4erd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "az0h181td1h01x8x9gxhnp47a",
+      "floor": 2,
+      "x": 1.6605,
+      "y": -0.0309,
+      "z": 3.0014,
+      "neighbors": [
+        "1gmnh1czf97m0y4s6119pfs1d",
+        "1k478kza39tbfu1uhbttg5ybb",
+        "28b2c48p1q2tgni83r5qkdc2b",
+        "duhb1en75fgewsniip8byupza",
+        "e9e4rxumug0x0dz4xyhgenakd",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": "atrium edge near the main corridor",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "eqpgxz0sb38saf4rcuxng6uud",
+      "floor": 3,
+      "x": -8.1177,
+      "y": 3.9882,
+      "z": -5.2545,
+      "neighbors": [
+        "7dsusre8f794uicd3gsb1q5yd",
+        "y8rya39xwbarmpmfakn2qaimc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "f7ryu7kyugtp7bx4dm3qa1dec",
+      "floor": 3,
+      "x": 6.8933,
+      "y": 3.9505,
+      "z": -5.2309,
+      "neighbors": [
+        "4z3dsh3hzihrqcr8fsxqdkf6c",
+        "ih6tueuzaxnyw3f47m5ygeccd",
+        "p8q154uncpnbn9zz3pf0utc1d",
+        "xdym22pw82n1ius7pazhttd1a"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "qf5w019hhy47ybsiu9fyu43kd",
+      "floor": 2,
+      "x": -4.6235,
+      "y": -0.0118,
+      "z": 3.7255,
+      "neighbors": [
+        "1k478kza39tbfu1uhbttg5ybb",
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "da9quipa0a6ny84ky8e6s3ptb",
+        "duhb1en75fgewsniip8byupza",
+        "g28dnxza8f193q5nzhdaxf2hd",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "rfuwtwdh07qm2ct0m04b3sb2a",
+      "floor": 3,
+      "x": -3.7984,
+      "y": 3.9677,
+      "z": 12.6416,
+      "neighbors": [
+        "9f45hxprghib9bgxnzkd87f6b",
+        "b1q6mcf0edqwd7xwzk6497maa",
+        "haipxtu4fuppeii5f8iik4btc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "ufgr14zs7pbz0pig3kp07r7hd",
+      "floor": 2,
+      "x": -10.7772,
+      "y": -0.0109,
+      "z": -4.9929,
+      "neighbors": [
+        "0f2a2fyf5iibscursb5gkyu9a",
+        "yfn0c6232s1yxzgxqmqw7n6zb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "xq7dhrun14q0789iwk5epwtkb",
+      "floor": 2,
+      "x": -3.7975,
+      "y": 0.0024,
+      "z": 13.3371,
+      "neighbors": [
+        "36aa2eubht8idy9kr2k8aubac",
+        "gprsw6xcqigh6reqseh3rmcrc",
+        "r5cp1eut86x1rc9yepd4ysxwd",
+        "w5kacr4ci0d92c5wkzrfs4erd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "yfn0c6232s1yxzgxqmqw7n6zb",
+      "floor": 2,
+      "x": -8.0502,
+      "y": -0.0095,
+      "z": -5.172,
+      "neighbors": [
+        "ed5xxn70mz1xe5q15ts4fqcpa",
+        "ufgr14zs7pbz0pig3kp07r7hd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "0f2a2fyf5iibscursb5gkyu9a",
+      "floor": 2,
+      "x": -11.0328,
+      "y": 0.0166,
+      "z": -0.0803,
+      "neighbors": [
+        "da9quipa0a6ny84ky8e6s3ptb",
+        "n0ppizy9u8xcadypd2bawceyc",
+        "ufgr14zs7pbz0pig3kp07r7hd"
+      ],
+      "room_type": null,
+      "label": "Gothic arcade gate",
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "2qe44cteny5g297zquh4gpgcd",
+      "floor": 2,
+      "x": 14.0629,
+      "y": -0.0058,
+      "z": 13.6204,
+      "neighbors": [
+        "684rbi72ft03adydwabgicmpb",
+        "panr3bktyzufic6e6xb4mtuub"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "4z3dsh3hzihrqcr8fsxqdkf6c",
+      "floor": 3,
+      "x": 11.8566,
+      "y": 4.1078,
+      "z": -5.4488,
+      "neighbors": [
+        "8c32s7nkt2849ty7f2xzdunda",
+        "c9t63yrk0m9rmufcmnebs24zb",
+        "f7ryu7kyugtp7bx4dm3qa1dec",
+        "xdym22pw82n1ius7pazhttd1a"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "9f45hxprghib9bgxnzkd87f6b",
+      "floor": 3,
+      "x": -7.5879,
+      "y": 3.9589,
+      "z": 10.4084,
+      "neighbors": [
+        "3ny35zcnrdiw2ham0z1sptyqd",
+        "haipxtu4fuppeii5f8iik4btc",
+        "rfuwtwdh07qm2ct0m04b3sb2a"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "b8ckm0ge7yzdxbq0f5tkeswyd",
+      "floor": 3,
+      "x": 1.3908,
+      "y": 1.9859,
+      "z": 9.1247,
+      "neighbors": [
+        "b1q6mcf0edqwd7xwzk6497maa",
+        "duhb1en75fgewsniip8byupza"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": true
+    },
+    {
+      "sweep_id": "n0ppizy9u8xcadypd2bawceyc",
+      "floor": 2,
+      "x": -10.9458,
+      "y": 0.0032,
+      "z": 4.1415,
+      "neighbors": [
+        "0f2a2fyf5iibscursb5gkyu9a",
+        "da9quipa0a6ny84ky8e6s3ptb",
+        "pr6uqwurqfw4xg6ghnx2q1zmb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "pr6uqwurqfw4xg6ghnx2q1zmb",
+      "floor": 2,
+      "x": -10.9155,
+      "y": 0.0014,
+      "z": 8.0617,
+      "neighbors": [
+        "5yqp8itw3r5s4iw3kuf4nqdsc",
+        "da9quipa0a6ny84ky8e6s3ptb",
+        "gprsw6xcqigh6reqseh3rmcrc",
+        "m50u46kpe0src2rqk6xmmri5d",
+        "n0ppizy9u8xcadypd2bawceyc",
+        "r5cp1eut86x1rc9yepd4ysxwd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "p8q154uncpnbn9zz3pf0utc1d",
+      "floor": 3,
+      "x": 6.6747,
+      "y": 3.9428,
+      "z": -2.573,
+      "neighbors": [
+        "f7ryu7kyugtp7bx4dm3qa1dec",
+        "xdym22pw82n1ius7pazhttd1a"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "y8rya39xwbarmpmfakn2qaimc",
+      "floor": 3,
+      "x": -4.1283,
+      "y": 3.9712,
+      "z": -3.9081,
+      "neighbors": [
+        "6hxpxut4nuzsug4625z1dk7bd",
+        "7dsusre8f794uicd3gsb1q5yd",
+        "eqpgxz0sb38saf4rcuxng6uud",
+        "ih6tueuzaxnyw3f47m5ygeccd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "1gmnh1czf97m0y4s6119pfs1d",
+      "floor": 2,
+      "x": 4.8596,
+      "y": -0.039,
+      "z": 3.3659,
+      "neighbors": [
+        "1k478kza39tbfu1uhbttg5ybb",
+        "28b2c48p1q2tgni83r5qkdc2b",
+        "az0h181td1h01x8x9gxhnp47a",
+        "e9e4rxumug0x0dz4xyhgenakd",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "28b2c48p1q2tgni83r5qkdc2b",
+      "floor": 2,
+      "x": 4.7287,
+      "y": -0.0332,
+      "z": 0.336,
+      "neighbors": [
+        "1gmnh1czf97m0y4s6119pfs1d",
+        "1k478kza39tbfu1uhbttg5ybb",
+        "8h1u5sb6x8sabzcssd91exwna",
+        "az0h181td1h01x8x9gxhnp47a",
+        "e9e4rxumug0x0dz4xyhgenakd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "684rbi72ft03adydwabgicmpb",
+      "floor": 2,
+      "x": 13.2253,
+      "y": -0.0084,
+      "z": 9.1299,
+      "neighbors": [
+        "2qe44cteny5g297zquh4gpgcd",
+        "panr3bktyzufic6e6xb4mtuub"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "b1q6mcf0edqwd7xwzk6497maa",
+      "floor": 3,
+      "x": 1.6091,
+      "y": 3.9815,
+      "z": 13.3351,
+      "neighbors": [
+        "b8ckm0ge7yzdxbq0f5tkeswyd",
+        "rfuwtwdh07qm2ct0m04b3sb2a",
+        "t9wqkieqytkbx8egqum168w6b"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "c9t63yrk0m9rmufcmnebs24zb",
+      "floor": 3,
+      "x": 14.0344,
+      "y": 4.1077,
+      "z": -4.7758,
+      "neighbors": [
+        "4z3dsh3hzihrqcr8fsxqdkf6c",
+        "8c32s7nkt2849ty7f2xzdunda",
+        "xdym22pw82n1ius7pazhttd1a"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "e9e4rxumug0x0dz4xyhgenakd",
+      "floor": 2,
+      "x": 4.5238,
+      "y": -0.0087,
+      "z": 6.1857,
+      "neighbors": [
+        "1gmnh1czf97m0y4s6119pfs1d",
+        "28b2c48p1q2tgni83r5qkdc2b",
+        "az0h181td1h01x8x9gxhnp47a",
+        "duhb1en75fgewsniip8byupza",
+        "y9da08g1g5b77bdscnw7n3fya"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "h13rg3tuxedbm5zzknqadu73b",
+      "floor": 2,
+      "x": 1.6126,
+      "y": -0.0036,
+      "z": -5.2682,
+      "neighbors": [
+        "1k478kza39tbfu1uhbttg5ybb",
+        "8h1u5sb6x8sabzcssd91exwna"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "ih6tueuzaxnyw3f47m5ygeccd",
+      "floor": 3,
+      "x": 1.6102,
+      "y": 3.9641,
+      "z": -5.3125,
+      "neighbors": [
+        "f7ryu7kyugtp7bx4dm3qa1dec",
+        "y8rya39xwbarmpmfakn2qaimc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "s959dys4uwha3mmrpkf6c5ddc",
+      "floor": 3,
+      "x": 13.9746,
+      "y": 4.1246,
+      "z": 13.4326,
+      "neighbors": [
+        "9xmtamt4c9trdkf242ttr6dwb",
+        "ubrr49s35m2uxuy9y5rwh74sb"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "thaxyfyip9r71h69gkck885aa",
+      "floor": 2,
+      "x": 6.7512,
+      "y": -0.0188,
+      "z": 13.1755,
+      "neighbors": [
+        "gaxq605gdd559tf073aubympc",
+        "panr3bktyzufic6e6xb4mtuub"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "t9wqkieqytkbx8egqum168w6b",
+      "floor": 3,
+      "x": 7.1107,
+      "y": 3.9794,
+      "z": 13.3567,
+      "neighbors": [
+        "3xprhtpgyi8tqttrrqhmghw6b",
+        "85ekq5i5e02pxxe0se65sr5sc",
+        "8cnnit59dnzb02y2nekixp6hc",
+        "9xmtamt4c9trdkf242ttr6dwb",
+        "b1q6mcf0edqwd7xwzk6497maa"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "y9da08g1g5b77bdscnw7n3fya",
+      "floor": 2,
+      "x": -0.7054,
+      "y": -0.023,
+      "z": 3.5546,
+      "neighbors": [
+        "1gmnh1czf97m0y4s6119pfs1d",
+        "1k478kza39tbfu1uhbttg5ybb",
+        "a6ce5xzf6mf48hy21cmu3q3ma",
+        "az0h181td1h01x8x9gxhnp47a",
+        "duhb1en75fgewsniip8byupza",
+        "e9e4rxumug0x0dz4xyhgenakd",
+        "g28dnxza8f193q5nzhdaxf2hd",
+        "qf5w019hhy47ybsiu9fyu43kd"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "6hxpxut4nuzsug4625z1dk7bd",
+      "floor": 3,
+      "x": -7.6273,
+      "y": 3.9671,
+      "z": 0.9017,
+      "neighbors": [
+        "7dsusre8f794uicd3gsb1q5yd",
+        "akkrtige2btw2mmn2ghr2z9za",
+        "y8rya39xwbarmpmfakn2qaimc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "81tg3n7bd96pyfp31pzd7mada",
+      "floor": 2,
+      "x": 14.0471,
+      "y": -0.0012,
+      "z": -5.204,
+      "neighbors": [
+        "2yy18y2trz8tgisf5r9s1tfpc",
+        "ht0bbyeyc69qwxm7did6ycbuc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    },
+    {
+      "sweep_id": "8h1u5sb6x8sabzcssd91exwna",
+      "floor": 2,
+      "x": 6.4681,
+      "y": -0.0057,
+      "z": -4.9294,
+      "neighbors": [
+        "28b2c48p1q2tgni83r5qkdc2b",
+        "h13rg3tuxedbm5zzknqadu73b",
+        "ht0bbyeyc69qwxm7did6ycbuc"
+      ],
+      "room_type": null,
+      "label": null,
+      "is_elevator": false,
+      "is_stairs": false
+    }
+  ],
+  "panos": [],
+  "assets": [
+    {
+      "type": "aed",
+      "sweep_id": "0f2a2fyf5iibscursb5gkyu9a",
+      "label": "Demo AED (placed by team)",
+      "source": "manual",
+      "verified": false,
+      "flags": [
+        "simulated"
+      ],
+      "floor": 2,
+      "x": -11.0328,
+      "y": 0.0166,
+      "z": -0.0803
+    }
+  ],
+  "camera": {
+    "id": "cam-atrium-1",
+    "name": "Atrium camera 1",
+    "sweep_id": "1k478kza39tbfu1uhbttg5ybb",
+    "landmark": "the central atrium",
+    "floor": 2
+  }
+}

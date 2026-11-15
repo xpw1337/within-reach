@@ -29,6 +29,10 @@ NAMES = {"aed": "AED", "extinguisher": "fire extinguisher", "exit": "exit"}
 PLURALS = {"aed": "AEDs", "extinguisher": "fire extinguishers", "exit": "exits and exit signs"}
 NOT_VISIBLE = {"aed": "no AED visible in the scan", "extinguisher": "no fire extinguisher visible in the scan",
                "exit": "no exit sign visible in the scan"}
+# Wording for a disclosed demo prop (asset flag 'simulated', demo/PLANTED_AED.md). It is never
+# described as found or visible in the scan.
+TEAM_PLACED_NOTE = "placed by our team for a demo, not found in the scan"
+SINGULAR = {"aed": "AED", "extinguisher": "fire extinguisher", "exit": "exit"}
 
 # Numbers that fixed wording itself uses and that are therefore always allowed.
 FIXED_NUMBERS = ("911",)
@@ -46,7 +50,10 @@ LETTER_SYSTEM = (
     "appear exactly as written in the facts; do not compute, round, convert or invent any number, "
     "date, phone number or statistic. Never say a building has no AED, extinguisher or exit: say it is "
     "not visible in the scan. Cover, in order: what we measured, the gaps found, the recommended "
-    "placement, and asking the owner to confirm and register their AEDs. Do not add a greeting "
+    "placement, and asking the owner to confirm and register their AEDs. Equipment under "
+    "team_placed was placed by our team for a demo: never call it found, detected or visible in "
+    "the scan, never count it as the building's equipment, and if you mention it say it was placed "
+    "by our team for a demo. Do not add a greeting "
     "header, signature, title or disclaimer; those are added separately. Markdown paragraphs only, "
     "under 250 words. Return JSON {\"body_md\": \"...\"}."
 )
@@ -163,6 +170,7 @@ def build_facts(
     occupancy_basis: str | None,
     show_s: Any,
     not_connected: dict[str, int] | None = None,
+    team_placed: dict[str, list[dict]] | None = None,
 ) -> dict:
     """Display-ready facts. ``show_s(asset_type, one_way_s)`` is shared.thresholds.display_seconds,
     so AED times are round trip here and nowhere is the conversion done inline.
@@ -171,13 +179,20 @@ def build_facts(
     asset rows, ``fix`` is a fixes row and ``fix_where`` the proposed sweep's node data.
     ``not_connected`` maps a gap type to the count of positions with no route to that equipment
     (left out of the red fraction, CONTRACTS section 1).
+
+    ``assets`` must hold only equipment found in the scan (or on file). ``team_placed`` maps a gap
+    type to disclosed demo props (asset flag 'simulated') with an optional ``place`` (the scan
+    position's label): they count in the measured times but never in ``visible_in_scan`` or in
+    the equipment lists.
     """
+    team_placed = team_placed or {}
     measured: dict[str, Any] = {}
     if score:
         for gap, prefix in (("aed", "aed"), ("extinguisher", "ext"), ("exit", "exit")):
             worst = score.get(f"{prefix}_worst_s")
             measured[gap] = {
                 "visible_in_scan": len(assets.get(gap, [])),
+                "team_placed": len(team_placed.get(gap, [])),
                 "worst_case": _time(gap, show_s(gap, worst)),
                 "red_area": _pct(score.get(f"{prefix}_red_frac")),
                 "not_connected": not_connected_phrase((not_connected or {}).get(gap)),
@@ -196,6 +211,11 @@ def build_facts(
         "aeds": [_place(a) for a in assets.get("aed", [])],
         "extinguishers": [_place(a) for a in assets.get("extinguisher", [])],
         "exits": [_place(a) for a in assets.get("exit", [])],
+        "team_placed": [
+            {"equipment": SINGULAR[gap], "label": a.get("label"), "where": a.get("place"),
+             "level": None if a.get("floor") is None else str(a["floor"]), "note": TEAM_PLACED_NOTE}
+            for gap in ("aed", "extinguisher", "exit") for a in team_placed.get(gap, [])
+        ],
         "ems_door": None if not ems_door else {
             "door": ems_door.get("desc"),
             "staging": (ems_door.get("staging") or {}).get("desc"),
@@ -242,9 +262,17 @@ def _title(facts: dict) -> str:
     return facts["building"].get("name") or facts["building"].get("address") or "Building"
 
 
+def _cap(text: str) -> str:
+    """First letter up, the rest untouched ("AEDs", not "Aeds")."""
+    return text[:1].upper() + text[1:]
+
+
 def _address(facts: dict) -> str:
     b = facts["building"]
-    return ", ".join(x for x in (b.get("address"), b.get("city")) if x) or "--"
+    address, city = b.get("address"), b.get("city")
+    if address and city and city.lower() in address.lower():
+        city = None  # the address already names the city
+    return ", ".join(x for x in (address, city) if x) or "--"
 
 
 def _level(place: dict) -> str:
@@ -272,11 +300,18 @@ def owner_letter_template(facts: dict) -> str:
         m = facts["measured"].get(gap)
         if not m:
             continue
-        if not m["visible_in_scan"]:
-            lines.append(f"- {PLURALS[gap].capitalize()}: {NOT_VISIBLE[gap]}, so every scanned "
+        demo = m.get("team_placed") or 0
+        if not m["visible_in_scan"] and not demo:
+            lines.append(f"- {_cap(PLURALS[gap])}: {NOT_VISIBLE[gap]}, so every scanned "
                          f"position counts as outside the target.")
         else:
-            line = (f"- {PLURALS[gap].capitalize()}: worst case {m['worst_case'] or '--'}; "
+            head = f"- {_cap(PLURALS[gap])}: "
+            if demo:
+                noun = SINGULAR[gap]
+                prop = f"{'an' if noun[0] in 'AEIOUaeiou' else 'a'} {noun} {TEAM_PLACED_NOTE}"
+                head += (f"{NOT_VISIBLE[gap]}; these times use only {prop}: " if not m["visible_in_scan"]
+                         else f"these times also include {prop}: ")
+            line = (f"{head}worst case {m['worst_case'] or '--'}; "
                     f"{m['red_area'] or '--'} of connected scanned positions are outside the target.")
             if m.get("not_connected"):
                 line += f" ({m['not_connected']}.)"
@@ -303,10 +338,18 @@ def owner_letter_template(facts: dict) -> str:
 def emergency_card(facts: dict) -> str:
     """One printable page. Deterministic: no LLM."""
     def items(places: list[dict], gap: str) -> list[str]:
+        demo = [t for t in facts.get("team_placed") or [] if t["equipment"] == SINGULAR[gap]]
+        lines = [f"- {p['where']}{_level(p)}" for p in places]
+        lines += [f"- {t['label'] or 'Demo ' + t['equipment']}"
+                  f"{', at the ' + t['where'] if t.get('where') else ''}{_level(t)}: {t['note']}."
+                  for t in demo]
         if not places:
             missing = NOT_VISIBLE[gap]
-            return [f"- {missing[0].upper()}{missing[1:]}. Ask staff where the nearest one is."]
-        return [f"- {p['where']}{_level(p)}" for p in places]
+            if demo:
+                lines.append(f"- No other {SINGULAR[gap]} visible in the scan.")
+            else:
+                lines.append(f"- {missing[0].upper()}{missing[1:]}. Ask staff where the nearest one is.")
+        return lines
 
     door = facts.get("ems_door") or {}
     out = [
@@ -337,5 +380,8 @@ def registry_list(facts: dict) -> str:
             for i, p in enumerate(facts["aeds"], start=1)))
     else:
         out.append("No AED visible in the scan. If the building has one, please register it.")
+    if any(t["equipment"] == "AED" for t in facts.get("team_placed") or []):
+        out.append("A demo AED placed by our team is not listed: it was not found in the scan and is "
+                   "not the building's equipment.")
     out.append(f"_{SCAN_DISCLAIMER}_")
     return "\n\n".join(out) + "\n"

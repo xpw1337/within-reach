@@ -1,6 +1,7 @@
 """Rank buildings across each city on their measured gaps (spec section 9.5).
 
-Fallback/demo buildings are ranked in their own group so they never displace a real rank.
+Fallback fixtures and demo venues (data.adapter.FIXTURE_PREFIXES) are each ranked alone, so they
+never displace a real rank or each other.
 """
 
 from __future__ import annotations
@@ -24,15 +25,23 @@ def rerank() -> dict:
     buildings = {b["id"]: b for b in db.fetch_by_ids(
         "buildings", [s["building_id"] for s in scores], columns="id,city,costar_property_id")}
     groups: dict[str, dict[str, BuildingScore]] = {}
+    counts: dict[str, int] = {}
     for row in scores:
         b = buildings.get(row["building_id"], {})
-        group = "fixture" if is_fixture(b) else (b.get("city") or "unknown city")
-        groups.setdefault(group, {})[row["building_id"]] = from_row(BuildingScore, row)
+        if is_fixture(b):
+            # Each fixture or demo venue is ranked alone (always 1), so adding one never changes
+            # another's rank or any real rank.
+            group, key = "fixture", f"fixture:{row['building_id']}"
+        else:
+            group = key = b.get("city") or "unknown city"
+        groups.setdefault(key, {})[row["building_id"]] = from_row(BuildingScore, row)
+        counts[group] = counts.get(group, 0) + 1
+    stored = {row["building_id"]: row.get("rank") for row in scores}
     for group in groups.values():
         ranks = rank_buildings(group)
-        db.upsert("building_scores", [{"building_id": bid, "rank": r} for bid, r in ranks.items()],
-                  on_conflict="building_id")
-    counts = {g: len(v) for g, v in groups.items()}
+        changed = [{"building_id": bid, "rank": r} for bid, r in ranks.items() if stored.get(bid) != r]
+        if changed:  # only rows whose rank moved are written
+            db.upsert("building_scores", changed, on_conflict="building_id")
     real = sum(n for g, n in counts.items() if g != "fixture")
     result(AGENT, "rerank", f"Re-ranked {real} scanned buildings on their measured gaps.", None,
            {"groups": counts})

@@ -11,17 +11,20 @@ from census.core.occupancy import estimate_occupancy as core_estimate
 from census.core.scoring import scan_priority
 from census.tools import db
 from census.tools.events import decision, result, tool_call, warning
+from data.adapter import FIXTURE_PREFIXES
+from data.adapter import is_fixture as is_fixture_id
 
 AGENT = "records"
 
 PROFILE_FIELDS = ("id", "costar_property_id", "name", "address", "city", "property_type", "floors",
                   "size_sqft", "tenants_count", "occupancy_est", "census_status", "priority_score")
-FALLBACK_PREFIX = "FALLBACK-"
+FALLBACK_PREFIX = FIXTURE_PREFIXES[0]  # kept for older imports; the list is data.adapter.FIXTURE_PREFIXES
 
 
 def is_fixture(building: dict) -> bool:
-    """Fallback/demo buildings never count toward a headline number (demo/DESIGN.md)."""
-    return str(building.get("costar_property_id") or "").startswith(FALLBACK_PREFIX)
+    """Fallback fixtures and demo venues (FALLBACK-, DEMO-) never count toward a census number
+    (demo/DESIGN.md, demo/PLANTED_AED.md)."""
+    return is_fixture_id(building.get("costar_property_id"))
 
 
 def get_costar_profile(building_id: str) -> dict:

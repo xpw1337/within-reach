@@ -19,6 +19,7 @@ from census.tools.events import GAP_NAMES, decision, pct, result, time_phrase, t
 from census.tools.mapper import (
     SOURCE_ASSET_TYPES,
     LoadedBuilding,
+    is_simulated,
     load,
     not_connected_phrase,
     source_sweeps,
@@ -124,8 +125,12 @@ def propose_fix(building_id: str, asset_type: str = "aed") -> str:
 def collect_facts(building_id: str) -> dict:
     loaded = load(building_id)
     score = db.fetch_one("building_scores", filters=[("eq", "building_id", building_id)])
-    assets = {gap: [a for a in loaded.assets if a.get("type") in SOURCE_ASSET_TYPES[gap]]
+    # Team-placed demo props (flag 'simulated') are never presented as found in the scan.
+    assets = {gap: [a for a in loaded.assets if a.get("type") in SOURCE_ASSET_TYPES[gap] and not is_simulated(a)]
               for gap in GAP_TYPES}
+    team_placed = {gap: [{**a, "place": _place_label(loaded, a)} for a in loaded.assets
+                         if a.get("type") in SOURCE_ASSET_TYPES[gap] and is_simulated(a)]
+                   for gap in GAP_TYPES}
     fix = db.fetch_one("fixes", filters=[("eq", "building_id", building_id), ("eq", "asset_type", "aed")]) \
         or db.fetch_one("fixes", filters=[("eq", "building_id", building_id)])
     fix_where = None
@@ -138,7 +143,16 @@ def collect_facts(building_id: str) -> dict:
         building=loaded.building, score=score, sweeps_scanned=total,
         assets=assets, fix=fix, fix_where=fix_where, ems_door=loaded.building.get("ems_door"),
         occupancy_basis=occupancy_estimate(loaded.building)["basis"], show_s=ctx().display_seconds,
+        team_placed=team_placed,
     )
+
+
+def _place_label(loaded: LoadedBuilding, asset: dict) -> str | None:
+    sweep = asset.get("sweep_id")
+    if sweep not in loaded.graph:
+        return None
+    data = loaded.graph.nodes[sweep]
+    return data.get("label") or data.get("room_type")
 
 
 def _save_document(building_id: str, kind: str, content_md: str) -> str:

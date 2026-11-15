@@ -83,6 +83,9 @@ class Settings(BaseSettings):
 
     # --- Datasets ---
     matterport_sdk_key: str | None = None
+    # Matterport Model API token pair (Basic auth), used by data/matterport.py. Never logged.
+    matterport_api_key: str | None = None
+    matterport_api_token: str | None = None
     costar_data_path: str | None = None  # unset means the fallback building is used
     vexcel_api_key: str | None = None
 

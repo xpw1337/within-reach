@@ -12,7 +12,8 @@ Dataset adapters and the loader (spec §9.1). This is the first thing built: not
 | `adapter.py` | `DatasetAdapter` protocol and `get_adapter()` (see `docs/CONTRACTS.md` §4). |
 | `costar.py` | `CoStarAdapter`: the real implementation, shaped by what inspection finds. |
 | `fallback.py` | `FallbackAdapter`: reads `demo/fallback/building.json`. |
-| `load.py` | CLI: normalize adapter output into `buildings`, `twin_nodes`, `panos`. |
+| `load.py` | CLI: normalize adapter output into `buildings`, `twin_nodes`, `panos`. `--file <path>` loads any building file in the fallback format (for example `demo/rabinowitz/building.json`). |
+| `matterport.py` | CLI: export a Matterport model through the Model API into the fallback format (the live demo venue, `DEMO-RABINOWITZ`). Walkable edges only: same floor within 6.0 m, floors joined through stair sweeps. |
 | `inspect_dataset.py` | Throwaway exploration script whose output feeds `README.md`. Keep it in the repo. |
 | `raw/` | Git-ignored local dataset files. |
 

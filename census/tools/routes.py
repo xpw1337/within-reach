@@ -7,6 +7,9 @@ Writes ``camera_routes`` with ``audio_url = NULL``; agent/io/tts.py renders the 
 ``directions`` holds the landmark phrase only, without the distance, because the CARDIAC speaker
 template already reads "{aed_distance} meters, {aed_directions}". ``distance_m`` is the walking
 distance in meters along ``path``.
+
+Assets flagged ``simulated`` (a disclosed demo prop placed by the team, demo/PLANTED_AED.md) are
+routed to like any current asset; only the place phrase comes from the scan position instead.
 """
 
 from __future__ import annotations
@@ -15,12 +18,21 @@ from census.core.directions import describe_route
 from census.core.graph import shortest_route
 from census.tools import db
 from census.tools.events import result, tool_call, warning
-from census.tools.mapper import SOURCE_ASSET_TYPES, load
+from census.tools.mapper import SIMULATED_FLAG, SOURCE_ASSET_TYPES, load
 
 AGENT = "mapper"
 TARGETS = ("aed", "exit", "extinguisher", "naloxone")
 # Asset types behind each camera route target; "exit" includes exit signs (CONTRACTS section 1).
 TARGET_TYPES = {**SOURCE_ASSET_TYPES, "naloxone": ("naloxone",)}
+
+
+def destination_label(graph, asset: dict) -> str | None:
+    """The place a stranger should walk to. A simulated (team-placed demo) asset's label is a
+    disclosure ("Demo AED (placed by team)"), not a place, so its scan position's label is used."""
+    if SIMULATED_FLAG in (asset.get("flags") or []):
+        node = graph.nodes[asset["sweep_id"]] if asset.get("sweep_id") in graph else {}
+        return node.get("label") or node.get("room_type") or asset.get("label")
+    return asset.get("label")
 
 
 def precompute_camera_routes(camera_id: str) -> None:
@@ -47,7 +59,7 @@ def precompute_camera_routes(camera_id: str) -> None:
         dest = next(a for a in assets if a["sweep_id"] == route.path[-1])
         rows.append({"camera_id": camera_id, "target": target, "path": route.path,
                      "distance_m": round(route.distance_m, 1),
-                     "directions": describe_route(loaded.graph, route, dest.get("label")),
+                     "directions": describe_route(loaded.graph, route, destination_label(loaded.graph, dest)),
                      "audio_url": None})
     if rows:
         db.upsert("camera_routes", rows, on_conflict="camera_id,target")

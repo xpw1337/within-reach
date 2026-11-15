@@ -14,12 +14,16 @@ from typing import Protocol, runtime_checkable
 from shared.config import get_settings
 from shared.types import BuildingRecord, PanoRef, TwinNode, VexcelInfo
 
-FIXTURE_PREFIX = "FALLBACK-"
+# The one list of costar_property_id prefixes that mark non-census buildings: the hand-built
+# fallback fixture (FALLBACK-) and live demo venues such as Rabinowitz (DEMO-). They never count in
+# a census number, ranking, report or automatic candidate list.
+FIXTURE_PREFIXES: tuple[str, ...] = ("FALLBACK-", "DEMO-")
+FIXTURE_PREFIX = FIXTURE_PREFIXES[0]  # kept for older imports
 
 
 def is_fixture(costar_property_id: str | None) -> bool:
-    """True for hand-built fixture buildings, which never count in census headline numbers."""
-    return bool(costar_property_id) and str(costar_property_id).startswith(FIXTURE_PREFIX)
+    """True for fixture and demo buildings, which never count in census numbers."""
+    return bool(costar_property_id) and str(costar_property_id).startswith(FIXTURE_PREFIXES)
 
 
 @runtime_checkable
