@@ -114,16 +114,28 @@ class Settings(BaseSettings):
 
     # --- Live ---
     camera_index: int = 0
-    camera_id: str = "cam-lobby-1"
+    # Read by vision/ (vision/config.py) and agent/sos (agent/sos/settings.py); listed here so the
+    # .env contract stays in one place.
+    camera_id: str = "webcam-1"
     agent_url: str = "http://localhost:8000"
-    down_seconds: float = 5.0
-    voice_check_seconds: float = 5.0
+    camera_lat: float | None = None
+    camera_lng: float | None = None
+    camera_label: str | None = None
+    witnessed_down_seconds: float = 0.8
+    down_seconds: float = 3.0
     responsive_hold_seconds: float = 1.5
-    confirm_auto_proceed_seconds: float = 10.0
-    found_down_escalate_seconds: float = 60.0
-    fall_911_cancel_seconds: float = 60.0
-    wave_size: int = 4
     accept_timeout_seconds: float = 20.0
+    accept_timeout_call_seconds: float = 45.0
+    call_reach_seconds: float = 1800.0
+    fire_radius_m: float = 15.0
+    aed_max_detour_m: float = 400.0
+    places_radius_m: float = 1000.0
+    vision_fire_model: str | None = None
+    vision_stream_port: int = 8001
+    valhalla_url: str | None = None
+    overpass_urls: str | None = None
+    next_public_vision_url: str | None = None
+    next_public_camera_id: str | None = None
 
     def require(self, *names: str) -> None:
         """Raise ``MissingSettingError`` naming every listed variable that is unset."""

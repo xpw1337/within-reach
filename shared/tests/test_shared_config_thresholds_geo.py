@@ -22,10 +22,10 @@ def test_defaults_match_spec():
     assert s.aed_roundtrip_target_s == 180
     assert s.ext_max_travel_m == 22.9
     assert s.exit_max_travel_m == 61
-    assert s.wave_size == 4
+    assert s.witnessed_down_seconds == 0.8
     assert s.accept_timeout_seconds == 20
     assert s.responsive_hold_seconds == 1.5
-    assert s.camera_id == "cam-lobby-1"
+    assert s.camera_id == "webcam-1"
     assert s.anthropic_api_key is None
 
 

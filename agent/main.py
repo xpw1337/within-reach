@@ -1,103 +1,70 @@
-"""FastAPI app factory. Run with one worker: ``uv run uvicorn agent.main:app --port 8000``.
+"""FastAPI app. Run with one worker (state and timers are in-process):
 
-Lifespan: settings, checkpointer (SQLite at ``.cache/checkpoints.sqlite``), runtime with the timer
-registry and the compiled graph, then warm-up (camera context, speaker audio, LLM ping) without
-blocking startup.
+    uv run uvicorn agent.main:app --host 0.0.0.0 --port 8000
+
+``--host 0.0.0.0`` lets phones on the same Wi-Fi reach it; otherwise use a tunnel.
+
+Routers: the live SOS path (``agent/sos``: camera events, phone and dashboard websockets, the
+simulated 911 agent) and the census commands (``/census``, unchanged).
 """
 
 from __future__ import annotations
 
-import asyncio
-import contextlib
 import logging
-from contextlib import AsyncExitStack, asynccontextmanager
+import socket
+from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from agent.api import census, config, dispatches, events, handcheck, incidents, photon, simulate, twilio
+from agent.api import census, handcheck
+from agent.sos import api as sos_api
+from agent.sos.hub import Hub
 
 log = logging.getLogger(__name__)
 
 
-async def warm_up(app: FastAPI) -> None:
-    """Fill the camera cache, make sure audio exists, ping the LLM. Never raises."""
-    from agent import deps
-    from agent.io.tts import render_camera_audio
-
-    rt = app.state.runtime
-    warmed = app.state.warmed
-    camera_id = app.state.camera_id
+def lan_addresses() -> list[str]:
+    """This machine's LAN IPv4 addresses (for the startup hint only)."""
+    found: set[str] = set()
     try:
-        camera, _, _ = await rt.camera_context(camera_id, refresh=True)
-        warmed["db"] = bool(camera.get("building_id") or camera.get("landmark"))
-    except Exception as exc:  # noqa: BLE001
-        log.warning("warm-up: camera context failed: %s", exc)
-    try:
-        if "voice_check" not in rt.speaker.available(camera_id):
-            await render_camera_audio(camera_id, store=rt.store, tts=deps.default_tts(),
-                                      audio_dir=deps.audio_dir(), upload=deps.default_upload())
-        warmed["tts"] = "voice_check" in rt.speaker.available(camera_id)
-    except Exception as exc:  # noqa: BLE001
-        log.warning("warm-up: audio render failed: %s", exc)
-
-    async def ping_llm() -> None:
-        try:
-            from shared import llm
-
-            await asyncio.wait_for(asyncio.to_thread(llm.warm_up, ("reasoning",)), timeout=30)
-            warmed["llm"] = True
-        except Exception as exc:  # noqa: BLE001 - the live path does not need the LLM
-            log.warning("warm-up: LLM unavailable: %s", exc)
-
-    rt.spawn(ping_llm())
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("10.255.255.255", 1))  # no packet is sent: this only picks the outbound interface
+        found.add(s.getsockname()[0])
+        s.close()
+    except OSError:
+        pass
+    return sorted(a for a in found if not a.startswith("127."))
 
 
-def create_app(runtime: Any = None, *, camera_id: str | None = None, warm: bool = True) -> FastAPI:
+def create_app(hub: Any = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        async with AsyncExitStack() as stack:
-            if app.state.runtime is None:
-                from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-
-                from agent import deps
-                from agent.io.speaker import LocalSpeaker
-                from agent.io.verify import SceneVerifier
-                from agent.live.config import from_settings
-                from agent.live.signals import LiveRuntime
-                from agent.live.timers import RealClock
-
-                s = deps.settings()
-                cfg = from_settings(s)
-                deps.cache_dir().mkdir(parents=True, exist_ok=True)
-                saver = await stack.enter_async_context(
-                    AsyncSqliteSaver.from_conn_string(str(deps.cache_dir() / "checkpoints.sqlite")))
-                app.state.runtime = LiveRuntime(
-                    cfg=cfg, store=deps.default_store(), speaker=LocalSpeaker(deps.audio_dir()),
-                    telephony=deps.default_telephony(), verifier=SceneVerifier(cfg.verify_timeout_seconds),
-                    clock=RealClock(), checkpointer=saver, messenger=deps.default_messenger())
-                app.state.camera_id = camera_id or s.camera_id
-            if warm:
-                await warm_up(app)
-            yield
-            rt = app.state.runtime
-            rt.timers.cancel_all()
-            with contextlib.suppress(Exception):
-                await rt.speaker.stop()
-            with contextlib.suppress(Exception):
-                await rt.store.flush()
-            if rt.imessage.messenger is not None:
-                with contextlib.suppress(Exception):
-                    await rt.imessage.messenger.aclose()
+        if app.state.sos is None:
+            app.state.sos = Hub()
+        for ip in lan_addresses():
+            log.warning("phones on this Wi-Fi can connect to http://%s:8000", ip)
+        yield
+        await app.state.sos.aclose()
 
     app = FastAPI(title="Within Reach agent", lifespan=lifespan)
-    app.state.runtime = runtime
-    app.state.camera_id = camera_id or "cam-lobby-1"
-    app.state.warmed = {"llm": False, "tts": False, "db": False}
-    app.state.photon_webhook_secret = None  # tests only; the app reads PHOTON_WEBHOOK_SECRET
+    app.state.sos = hub
     app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
-    for module in (config, census, handcheck, events, incidents, dispatches, twilio, photon, simulate):
+
+    @app.get("/health")
+    async def health() -> dict:
+        h = app.state.sos
+        return {"ok": True, "cameras": len(h.cameras) if h else 0,
+                "phones": len(h.phone_sockets) if h else 0, "lan": lan_addresses()}
+
+    @app.get("/config/thresholds")
+    async def thresholds() -> dict:
+        from shared.thresholds import thresholds_payload
+
+        return thresholds_payload()
+
+    for module in (sos_api, census, handcheck):
         app.include_router(module.router)
     return app
 
