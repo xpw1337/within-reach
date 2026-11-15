@@ -25,6 +25,7 @@ import {
   ALERT_LOADING,
   ALERT_LOAD_ERROR,
   ALERT_VIEW_3D,
+  ALERT_VIEW_3D_LOCATING,
   ALERT_WAITING_ROLE,
   ALERT_WHERE,
   ALERT_YOUR_ROLE,
@@ -50,8 +51,9 @@ import {
   STEP_WITH_PERSON,
 } from '../../lib/copy';
 import { env } from '../../lib/env';
-import { buildAlertPlan, legFromStart } from '../../lib/floorPlan';
-import { loadActiveGeoref, type ActiveGeoref } from '../../lib/georefStore';
+import { buildAlertPlan, legFromStart, reachableFrom } from '../../lib/floorPlan';
+import { judgeStartFix } from '../../lib/georef';
+import { freshFix, loadActiveGeoref, type ActiveGeoref } from '../../lib/georefStore';
 import { distanceMeters, useLocationState } from '../../lib/location';
 import { useProfile } from '../../lib/profile';
 import { errorMessage } from '../../lib/supabase';
@@ -85,6 +87,8 @@ export default function AlertScreen() {
   const [missing, setMissing] = useState(false);
   /** AED runner only: set by "I have the AED". */
   const [hasAed, setHasAed] = useState(false);
+  // True while "View route in 3D" reads a GPS fix to start the 3D walk where the phone is.
+  const [locating3d, setLocating3d] = useState(false);
   /** Set by "I'm with the person" right away, before (and whether or not) the server answers. */
   const [withPerson, setWithPerson] = useState(false);
 
@@ -236,19 +240,40 @@ export default function AlertScreen() {
 
   // "View route in 3D": the dashboard's responder route page (dashboard/app/building/[id]/route), with
   // this helper's leg, role and start sweep so the 3D walk matches the plan below.
+  // The 3D walk starts where the phone is: the helper's start on the plan when it is already set
+  // (GPS or a tap), else a fresh GPS fix snapped to the scan the same way (calibration, accuracy and
+  // distance limits in lib/georef.ts). Without one it starts at the person, as the page's default.
+  // The runner's way back from the AED (to_person after "I have the AED") always starts at the AED.
   const startSweep = helperStart.start.phase === 'done' ? helperStart.start.sweepId : null;
-  const routeQuery = [
-    camera?.id ? `camera=${encodeURIComponent(camera.id)}` : null,
-    leg === 'to_aed' || leg === 'to_person' ? `leg=${leg}` : null,
-    d.role ? `role=${encodeURIComponent(d.role)}` : null,
-    startSweep && (leg === 'to_aed' || (leg === 'to_person' && !runner)) ? `from=${encodeURIComponent(startSweep)}` : null,
-  ]
-    .filter(Boolean)
-    .join('&');
-  const routeUrl =
-    env.dashboardUrl && buildingId
-      ? `${env.dashboardUrl}/building/${encodeURIComponent(buildingId)}/route${routeQuery ? `?${routeQuery}` : ''}`
-      : null;
+  const fromApplies = leg !== 'with_person' && !(leg === 'to_person' && runner);
+  const routeBase = env.dashboardUrl && buildingId ? `${env.dashboardUrl}/building/${encodeURIComponent(buildingId)}/route` : null;
+  const routeUrl = (from: string | null): string | null => {
+    if (!routeBase) return null;
+    const query = [
+      camera?.id ? `camera=${encodeURIComponent(camera.id)}` : null,
+      leg === 'to_aed' || leg === 'to_person' ? `leg=${leg}` : null,
+      d.role ? `role=${encodeURIComponent(d.role)}` : null,
+      from && fromApplies ? `from=${encodeURIComponent(from)}` : null,
+    ]
+      .filter(Boolean)
+      .join('&');
+    return `${routeBase}${query ? `?${query}` : ''}`;
+  };
+  const open3d = async () => {
+    let from = startSweep;
+    const calibration = georef?.active?.georef ?? null;
+    if (!from && fromApplies && plan && calibration && location.status === 'watching') {
+      setLocating3d(true);
+      const goal = leg === 'to_person' || d.role === 'patient' || !plan.aedId ? plan.personId : plan.aedId;
+      const reachable = reachableFrom(plan.graph, goal);
+      const fix = await freshFix();
+      const verdict = fix ? judgeStartFix(calibration, fix, [...plan.graph.nodes.values()], (id) => reachable.has(id)) : null;
+      if (verdict?.ok) from = verdict.sweepId;
+      setLocating3d(false);
+    }
+    const url = routeUrl(from);
+    if (url) void WebBrowser.openBrowserAsync(url);
+  };
 
   const aedLabel = plan?.aedSimulated || (ctx?.aed?.flags ?? []).includes('simulated') ? PLAN_AED_SIMULATED : PLAN_AED;
   const stepTitle =
@@ -366,10 +391,10 @@ export default function AlertScreen() {
           </>
         )}
         <Button
-          title={ALERT_VIEW_3D}
+          title={locating3d ? ALERT_VIEW_3D_LOCATING : ALERT_VIEW_3D}
           kind="secondary"
-          disabled={!routeUrl}
-          onPress={() => routeUrl && void WebBrowser.openBrowserAsync(routeUrl)}
+          disabled={!routeBase || locating3d}
+          onPress={() => void open3d()}
         />
       </Card>
 

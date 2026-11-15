@@ -110,6 +110,7 @@ export const ALERT_DISTANCE_FROM_YOU = 'Distance from you:';
 export const ALERT_FROM_PERSON = 'From the person:';
 export const ALERT_ARRIVED = 'You are marked as arrived.';
 export const ALERT_VIEW_3D = 'View route in 3D';
+export const ALERT_VIEW_3D_LOCATING = 'Finding where you are';
 export const ALERT_ACCEPT = 'Accept';
 export const ALERT_DECLINE = "Can't help";
 export const ALERT_DONE = 'Done';
