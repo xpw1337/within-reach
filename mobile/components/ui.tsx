@@ -1,5 +1,6 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -15,6 +16,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { colors, font, radius, space, type } from './theme';
+
+export type IconName = ComponentProps<typeof Ionicons>['name'];
 
 // The look of the sos/phone-app redesign (white, Red Cross red, Nunito, chunky buttons with a solid
 // bottom edge), applied to this app's own components: same names, props and behavior as before.
@@ -64,6 +67,7 @@ export function Button({
   disabled,
   busy,
   big,
+  icon,
 }: {
   title: string;
   onPress: () => void;
@@ -71,6 +75,8 @@ export function Button({
   disabled?: boolean;
   busy?: boolean;
   big?: boolean;
+  /** Optional Ionicons glyph before the title. */
+  icon?: IconName;
 }) {
   const c = BUTTON[kind];
   const isDisabled = disabled || busy;
@@ -97,7 +103,10 @@ export function Button({
       {busy ? (
         <ActivityIndicator color={c.fg} />
       ) : (
-        <Text style={[styles.buttonText, big && styles.buttonTextBig, { color: c.fg }]}>{title}</Text>
+        <View style={styles.buttonInner}>
+          {icon ? <Ionicons name={icon} size={big ? 24 : 20} color={c.fg} /> : null}
+          <Text style={[styles.buttonText, big && styles.buttonTextBig, { color: c.fg }]}>{title}</Text>
+        </View>
       )}
     </Pressable>
   );
@@ -186,6 +195,112 @@ export function Notice({ children, tone = 'warn' }: { children: ReactNode; tone?
   );
 }
 
+// ---------- from the sos/phone-app redesign (used by the home screen and the first-run steps) ----------
+
+export function Hero({ children, color, center }: { children: ReactNode; color?: string; center?: boolean }) {
+  return <Text style={[type.hero, color ? { color } : null, center ? { textAlign: 'center' } : null]}>{children}</Text>;
+}
+
+export function Small({ children, color, center }: { children: ReactNode; color?: string; center?: boolean }) {
+  return <Text style={[type.small, color ? { color } : null, center ? { textAlign: 'center' } : null]}>{children}</Text>;
+}
+
+/** Round icon button (Find My style). */
+export function IconButton({
+  icon,
+  onPress,
+  onLongPress,
+  tint = colors.ink,
+  bg = 'rgba(0,0,0,0.08)',
+  size = 56,
+  label,
+}: {
+  icon: IconName;
+  onPress: () => void;
+  onLongPress?: () => void;
+  tint?: string;
+  bg?: string;
+  size?: number;
+  label: string;
+}) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      style={({ pressed }) => [
+        { width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center', opacity: pressed ? 0.7 : 1 },
+      ]}
+    >
+      <Ionicons name={icon} size={size * 0.43} color={tint} />
+    </Pressable>
+  );
+}
+
+/** A row with an icon in a tinted circle, a title and a detail. */
+export function Row({
+  icon,
+  tint = colors.red,
+  title,
+  detail,
+  right,
+}: {
+  icon: IconName;
+  tint?: string;
+  title: string;
+  detail?: string | null;
+  right?: ReactNode;
+}) {
+  return (
+    <View style={styles.row}>
+      <View style={[styles.rowIcon, { backgroundColor: tint + '1F' }]}>
+        <Ionicons name={icon} size={20} color={tint} />
+      </View>
+      <View style={styles.flex}>
+        <Text style={type.heading} numberOfLines={1}>
+          {title}
+        </Text>
+        {detail ? (
+          <Text style={type.small} numberOfLines={3}>
+            {detail}
+          </Text>
+        ) : null}
+      </View>
+      {right}
+    </View>
+  );
+}
+
+/** Duolingo-style progress bar. */
+export function Progress({ value, color = colors.red }: { value: number; color?: string }) {
+  return (
+    <View style={styles.track}>
+      <View style={[styles.fill, { width: `${Math.max(4, Math.min(100, value * 100))}%`, backgroundColor: color }]}>
+        <View style={styles.shine} />
+      </View>
+    </View>
+  );
+}
+
+/** Big on/off switch drawn as a pill. */
+export function Toggle({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  return (
+    <Pressable
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value, disabled }}
+      disabled={disabled}
+      onPress={() => {
+        void Haptics.selectionAsync().catch(() => {});
+        onChange(!value);
+      }}
+      style={[styles.toggle, { backgroundColor: value ? colors.green : colors.line, opacity: disabled ? 0.5 : 1 }]}
+    >
+      <View style={[styles.knob, { alignSelf: value ? 'flex-end' : 'flex-start' }]} />
+    </Pressable>
+  );
+}
+
 export const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { padding: space.xl, gap: space.lg, paddingBottom: space.xl * 2 },
@@ -210,6 +325,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: space.xl,
   },
   buttonBig: { minHeight: 76 },
+  buttonInner: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   buttonText: { fontFamily: font.heavy, fontSize: 17, letterSpacing: 0.8, textTransform: 'uppercase', textAlign: 'center' },
   buttonTextBig: { fontSize: 21 },
   field: { gap: space.sm },
@@ -241,4 +357,11 @@ export const styles = StyleSheet.create({
   notice: { flexDirection: 'row', gap: space.sm, alignItems: 'flex-start', padding: space.md, borderRadius: radius.md },
   noticeDot: { width: 8, height: 8, borderRadius: 4, marginTop: 7 },
   noticeText: { ...type.small, color: colors.ink, flex: 1 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  rowIcon: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },
+  track: { height: 16, borderRadius: 8, backgroundColor: colors.line, overflow: 'hidden' },
+  fill: { height: 16, borderRadius: 8 },
+  shine: { position: 'absolute', top: 4, left: 8, right: 8, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.35)' },
+  toggle: { width: 64, height: 36, borderRadius: 18, padding: 4, justifyContent: 'center' },
+  knob: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.white },
 });
