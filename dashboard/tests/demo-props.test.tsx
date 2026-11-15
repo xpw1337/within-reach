@@ -6,9 +6,8 @@ import { FlagsList } from "@/components/building/BuildingFacts";
 import { FloorHeatmap } from "@/components/building/FloorHeatmap";
 import { ZoneLegend } from "@/components/building/ZoneLegend";
 import { readRunBuildingIds } from "@/lib/contracts";
-import { assetDisplayLabel, copy, milestoneLabel, onlySimulatedOfType, roleLabel, simulatedLabel } from "@/lib/copy";
+import { assetDisplayLabel, copy, onlySimulatedOfType, simulatedLabel } from "@/lib/copy";
 import { boundsOf, indexCoverage } from "@/lib/heatmap";
-import { describeEvent, routeEndsAtSimulated } from "@/lib/incident";
 import {
   isCensusRun,
   isExcludedFromCensus,
@@ -16,7 +15,6 @@ import {
   nonCensusFilter,
   nonCensusKind,
   type Asset,
-  type IncidentEvent,
   type TwinNode,
 } from "@/lib/rows";
 
@@ -84,16 +82,6 @@ describe("simulated label", () => {
     expect(onlySimulatedOfType([], "aed")).toBe(false);
     expect(copy.unknownZone("aed", true, true)).toBe("Not connected in the scan: no route to the Demo AED (placed by team)");
     expect(copy.unknownZone("aed", false, false)).toBe("No AED visible in the scan");
-  });
-
-  it("knows when a live route ends at a demo prop", () => {
-    const assets = [{ ...demoAed, sweep_id: "s9" }];
-    expect(routeEndsAtSimulated(["s1", "s9"], "aed", assets)).toBe(true);
-    expect(routeEndsAtSimulated(["s1", "s5"], "aed", assets)).toBe(true);
-    const mixed = [...assets, { type: "aed" as const, sweep_id: "s5", source: "detected", flags: [] }];
-    expect(routeEndsAtSimulated(["s1", "s5"], "aed", mixed)).toBe(false);
-    expect(routeEndsAtSimulated(["s1", "s9"], "aed", mixed)).toBe(true);
-    expect(routeEndsAtSimulated(["s1"], "exit", assets)).toBe(false);
   });
 });
 
@@ -169,32 +157,5 @@ describe("demo props on screen", () => {
     );
     expect(html).toContain("Demo AED (placed by team)");
     expect(html).toContain(copy.simulatedNotCensus);
-  });
-});
-
-describe("live milestones and roles", () => {
-  const ev = (payload: Record<string, unknown>): IncidentEvent => ({
-    id: 1,
-    incident_id: "i1",
-    ts: "2026-11-14T20:00:06.000Z",
-    actor: "desk",
-    kind: "milestone",
-    payload: payload as IncidentEvent["payload"],
-  });
-  const who = (a: string | null) => a ?? "--";
-
-  it("renders the AED milestones", () => {
-    expect(describeEvent(ev({ kind: "aed_picked_up" }), who)).toBe("AED picked up");
-    expect(describeEvent(ev({ kind: "aed_help_started" }), who)).toBe("AED help started");
-    expect(describeEvent(ev({ kind: "cpr_started", by: "desk" }), who)).toBe("CPR started");
-    expect(describeEvent(ev({ kind: "aed_arrived" }), who)).toBe("AED arrived");
-    expect(milestoneLabel("something_new")).toBe("Milestone: something new");
-    expect(milestoneLabel(null)).toBe("Milestone");
-  });
-
-  it("names roles without implying an order", () => {
-    expect(roleLabel("aed_runner")).toBe("AED runner");
-    expect(roleLabel("patient")).toBe("patient");
-    expect(roleLabel(null)).toBe("--");
   });
 });

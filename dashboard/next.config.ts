@@ -24,7 +24,8 @@ function loadRootPublicEnv() {
 }
 loadRootPublicEnv();
 
-const agentUrl = (process.env.NEXT_PUBLIC_AGENT_URL ?? "").replace(/\/+$/, "");
+// Unset: the agent runs on the same machine as the dashboard server (the proxy below runs server-side).
+const agentUrl = (process.env.NEXT_PUBLIC_AGENT_URL ?? "").replace(/\/+$/, "") || "http://localhost:8000";
 
 const nextConfig: NextConfig = {
   cacheComponents: true,

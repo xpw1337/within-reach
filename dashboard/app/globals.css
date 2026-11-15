@@ -1,24 +1,27 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #090c11;
-  --panel: #10151c;
-  --panel-2: #151b24;
-  --raised: #1b2330;
-  --line: #243041;
-  --line-strong: #33415a;
-  --text: #e9eef5;
-  --muted: #93a0b2;
-  --faint: #5f6c7e;
-  --accent: #5cc8ff;
-  --decision: #ffb547;
-  --warn: #ff8a3d;
-  --zone-green: #2ec27e;
-  --zone-yellow: #f5c542;
-  --zone-red: #ff4d4f;
-  --zone-unknown: #5b6676;
-  --danger: #ff4d4f;
-  --ok: #2ec27e;
+  /* Within Reach: white, one strong red (Red Cross), chunky rounded shapes (Duolingo-style). */
+  --bg: #f7f7f7;
+  --panel: #ffffff;
+  --panel-2: #f5f5f5;
+  --raised: #efefef;
+  --line: #e8e8e8;
+  --line-strong: #d6d6d6;
+  --text: #1a1a1a;
+  --muted: #777777;
+  --faint: #afafaf;
+  --accent: #ed1b2e;
+  --accent-dark: #b8101f;
+  --decision: #ff8a00;
+  --warn: #ff8a00;
+  --zone-green: #34c759;
+  --zone-yellow: #ffc800;
+  --zone-red: #ed1b2e;
+  --zone-unknown: #b0b0b0;
+  --danger: #ed1b2e;
+  --ok: #34c759;
+  --ok-dark: #23a047;
 }
 
 @theme inline {
@@ -32,6 +35,8 @@
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-dark: var(--accent-dark);
+  --color-ok-dark: var(--ok-dark);
   --color-decision: var(--decision);
   --color-warn: var(--warn);
   --color-zone-green: var(--zone-green);
@@ -40,8 +45,7 @@
   --color-zone-unknown: var(--zone-unknown);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
-  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", "Helvetica Neue", Arial,
-    sans-serif;
+  --font-sans: var(--font-nunito), ui-rounded, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
@@ -64,11 +68,11 @@ body {
 }
 
 .label {
-  font-size: 0.72rem;
-  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
-  font-weight: 600;
+  font-weight: 800;
 }
 
 ::selection {
@@ -284,4 +288,37 @@ body {
     overflow: visible !important;
     border: none !important;
   }
+}
+
+/* ---------- live map tags ---------- */
+
+.wr-tag {
+  display: inline-block;
+  white-space: nowrap;
+  padding: 4px 9px;
+  border-radius: 999px;
+  border: 2px solid #fff;
+  color: #fff;
+  font: 900 11px/1.1 var(--font-sans);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+}
+
+.wr-pulse {
+  color: #fff;
+  animation: wr-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes wr-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(255 77 79 / 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgb(255 77 79 / 0);
+  }
+}
+
+/* Voice wave on the 911 card: the dashboard never listens, so its microphone button stays hidden. */
+.voice-wave-mic {
+  display: none !important;
 }
