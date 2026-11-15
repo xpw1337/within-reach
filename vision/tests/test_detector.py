@@ -52,8 +52,9 @@ def test_witnessed_fall():
     e = events[0]
     assert e.witnessed is True
     assert e.victim_track_id == 1
-    # Down pose starts during the fall; person_down follows DOWN_SECONDS later.
-    assert 3.0 + 5.0 <= e.t <= 3.0 + FALL_S + 5.0 + 0.1
+    # A witnessed fall alerts WITNESSED_DOWN_SECONDS after the down pose starts, not DOWN_SECONDS.
+    cfg = DetectorConfig()
+    assert 3.0 + cfg.witnessed_down_seconds <= e.t <= 3.0 + FALL_S + cfg.witnessed_down_seconds + 0.1
 
 
 def test_witnessed_fall_with_keypoint_noise():
@@ -63,7 +64,7 @@ def test_witnessed_fall_with_keypoint_noise():
 
 
 def test_down_seconds_is_respected():
-    events = run(fallen(lie_s=10.0), DetectorConfig(down_seconds=2.0))
+    events = run(fallen(lie_s=10.0), DetectorConfig(down_seconds=2.0, witnessed_down_seconds=2.0))
     assert kinds(events) == [PERSON_DOWN]
     assert events[0].t < 3.0 + FALL_S + 2.1
 
@@ -73,7 +74,7 @@ def test_brief_down_pose_does_not_trigger():
         Clip()
         .add(3.0, hold(1, standing()))
         .add(FALL_S, move(1, standing(), lying()))
-        .add(3.0, hold(1, lying()))  # less than DOWN_SECONDS
+        .add(0.3, hold(1, lying()))  # back up before WITNESSED_DOWN_SECONDS (a stumble)
         .add(1.0, move(1, lying(), standing()))
         .add(10.0, hold(1, standing()))
     )
@@ -97,7 +98,7 @@ def test_already_down_when_first_seen_is_found_down():
     assert kinds(events) == [PERSON_DOWN]
     assert events[0].witnessed is False
     assert events[0].victim_track_id == 4
-    assert events[0].t == pytest.approx(5.0, abs=0.1)
+    assert events[0].t == pytest.approx(DetectorConfig().down_seconds, abs=0.1)
 
 
 def test_sitting_on_a_chair_never_triggers():
@@ -395,3 +396,52 @@ def test_config_overrides():
         DetectorConfig().with_overrides(["nope=1"])
     with pytest.raises(ValueError):
         DetectorConfig().with_overrides(["down_seconds=abc"])
+
+
+def test_cropped_person_close_to_camera_never_triggers():
+    # Head and shoulders only (a person sitting at the laptop): a wide box, but no hips or legs seen.
+    import numpy as np
+
+    conf = np.full(17, 0.9)
+    conf[11:] = 0.1  # hips, knees, ankles below the frame
+    det = Detector(DetectorConfig())
+    k = lying()
+    events = []
+    for i in range(200):
+        events += det.update(i * 0.1, [S.obs(7, k, conf=conf)])
+    assert events == []
+
+
+def _run_hidden_hips(frames):
+    """Feed (pose, seconds) segments with the hips never found, as on many laptop webcams."""
+    import numpy as np
+
+    conf = np.full(17, 0.9)
+    conf[11:13] = 0.05  # hips not found
+    det = Detector(DetectorConfig())
+    events, t, dt = [], 0.0, 1 / 15
+    for a, b, secs in frames:
+        n = max(1, int(secs / dt))
+        for i in range(n):
+            k = S.lerp(a, b, (i + 1) / n)
+            events += det.update(t, [S.obs(3, k, conf=conf)])
+            t += dt
+    return events
+
+
+def test_fall_detected_when_hips_are_never_found():
+    st, ly = standing(), lying()
+    events = _run_hidden_hips([(st, st, 3.0), (st, ly, 0.5), (ly, ly, 2.0)])
+    assert kinds(events) == [PERSON_DOWN]
+    assert events[0].witnessed is True
+    assert events[0].t < 3.0 + 0.5 + DetectorConfig().witnessed_down_seconds + 0.3
+
+
+def test_sitting_on_the_floor_with_hips_hidden_never_triggers():
+    st, sf = standing(), S.sitting_floor()
+    assert _run_hidden_hips([(st, st, 3.0), (st, sf, 1.0), (sf, sf, 20.0)]) == []
+
+
+def test_bending_over_with_hips_hidden_never_triggers():
+    st, bd = standing(), S.bending()
+    assert _run_hidden_hips([(st, st, 3.0), (st, bd, 0.7), (bd, bd, 2.0), (bd, st, 0.7), (st, st, 3.0)]) == []

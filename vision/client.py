@@ -1,7 +1,8 @@
 """POST /events to the live agent (docs/CONTRACTS.md section 2), with retry.
 
-Body: ``{camera_id, kind, victim_track_id:int, witnessed?:bool, ts, frame_jpeg_b64?:string}``,
-with ``witnessed`` and ``frame_jpeg_b64`` on ``person_down`` only.
+Body: ``{camera_id, kind, victim_track_id?:int, witnessed?:bool, ts, frame_jpeg_b64?:string, fire?:{...}}``.
+``witnessed`` and ``frame_jpeg_b64`` ride on ``person_down`` only; ``fire`` (label, conf, bbox_frac)
+on ``fire_detected`` only. Fire events carry no track id.
 
 Privacy rules, enforced here (vision/DESIGN.md, spec section 16):
 
@@ -26,6 +27,9 @@ import httpx
 import numpy as np
 
 from vision.detector import EVENT_KINDS, PERSON_DOWN, VisionEvent
+from vision.fire import FIRE_CLEARED, FIRE_DETECTED, FireEvent
+
+ALL_KINDS = (*EVENT_KINDS, FIRE_DETECTED, FIRE_CLEARED)
 
 log = logging.getLogger("vision.client")
 
@@ -55,21 +59,24 @@ def encode_snapshot(frame: np.ndarray, max_side: int, quality: int) -> str:
 
 def build_payload(
     camera_id: str,
-    event: VisionEvent,
+    event: VisionEvent | FireEvent,
     wall_ts: float,
     frame: np.ndarray | None = None,
     *,
     snapshot_max_side: int = 640,
     snapshot_jpeg_quality: int = 70,
 ) -> dict[str, Any]:
-    if event.kind not in EVENT_KINDS:
+    if event.kind not in ALL_KINDS:
         raise ValueError(f"unknown event kind {event.kind!r}")
-    payload: dict[str, Any] = {
-        "camera_id": camera_id,
-        "kind": event.kind,
-        "victim_track_id": int(event.victim_track_id),
-        "ts": iso_utc(wall_ts),
-    }
+    payload: dict[str, Any] = {"camera_id": camera_id, "kind": event.kind, "ts": iso_utc(wall_ts)}
+    if isinstance(event, FireEvent):
+        if event.kind == FIRE_DETECTED:
+            payload["fire"] = {"label": event.label, "conf": event.conf,
+                               "bbox_frac": list(event.bbox_frac) if event.bbox_frac else None}
+        if frame is not None:
+            log.warning("dropped a frame passed with %s: frames are only sent with person_down", event.kind)
+        return payload
+    payload["victim_track_id"] = int(event.victim_track_id)
     if event.kind == PERSON_DOWN:
         payload["witnessed"] = bool(event.witnessed)
         if frame is not None:
@@ -103,7 +110,7 @@ class EventClient:
         self._sleep = sleep
         self._http = httpx.Client(base_url=agent_url.rstrip("/"), timeout=timeout, transport=transport)
 
-    def payload(self, event: VisionEvent, wall_ts: float, frame: np.ndarray | None = None) -> dict[str, Any]:
+    def payload(self, event: VisionEvent | FireEvent, wall_ts: float, frame: np.ndarray | None = None) -> dict[str, Any]:
         return build_payload(
             self.camera_id,
             event,
@@ -163,7 +170,7 @@ class BackgroundSender:
         self._thread = threading.Thread(target=self._run, name="vision-events", daemon=True)
         self._thread.start()
 
-    def submit(self, event: VisionEvent, wall_ts: float, frame: np.ndarray | None = None) -> dict[str, Any]:
+    def submit(self, event: VisionEvent | FireEvent, wall_ts: float, frame: np.ndarray | None = None) -> dict[str, Any]:
         payload = self.client.payload(event, wall_ts, frame)
         self._q.put(payload)
         return payload

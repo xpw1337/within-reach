@@ -28,6 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # Fields whose env var is the spec's own name (.env.example). Everything else is VISION_<FIELD>.
 _SPEC_ENV_NAMES = {
     "down_seconds": "DOWN_SECONDS",
+    "witnessed_down_seconds": "WITNESSED_DOWN_SECONDS",
     "responsive_hold_seconds": "RESPONSIVE_HOLD_SECONDS",
 }
 
@@ -35,8 +36,11 @@ _SPEC_ENV_NAMES = {
 @dataclass(frozen=True)
 class DetectorConfig:
     # ---- Spec constants -------------------------------------------------------------------
-    # Down pose held this long before person_down (spec 9.9, demo value 5).
-    down_seconds: float = 5.0
+    # Down pose held this long before person_down when the fall was NOT seen (slow lie-down or
+    # already on the floor): longer, to avoid alerting on someone stretching on the floor.
+    down_seconds: float = 3.0
+    # A witnessed fall (hips dropped fast from standing) alerts after this short hold instead.
+    witnessed_down_seconds: float = 0.8
     # Victim wrist above shoulder this long before responsive (spec section 3).
     responsive_hold_seconds: float = 1.5
     # "bbox w/h > 1.3" (spec 9.9).
@@ -50,13 +54,22 @@ class DetectorConfig:
 
     # ---- UNTUNED: placeholders until the demo/clips tuning set exists (5.4) -------------------
     # Keypoints below this confidence are treated as not visible. UNTUNED.
-    keypoint_min_conf: float = 0.5
+    keypoint_min_conf: float = 0.3
     # "Torso near horizontal" (spec gives no number): degrees from vertical. UNTUNED.
     torso_down_deg: float = 60.0
     # Torso this close to vertical means upright (standing, sitting, kneeling): never down. UNTUNED.
     torso_upright_deg: float = 35.0
     # Thighs this close to vertical (plus an upright torso) means standing, not sitting. UNTUNED.
     thigh_standing_deg: float = 30.0
+    # Head-to-feet body line this far from vertical counts as lying (sitting on the floor with legs
+    # out is about 60, lying about 90). UNTUNED.
+    axis_down_deg: float = 72.0
+    # The head has dropped this far below its standing height (fraction of standing height): lying,
+    # not sitting on the floor (about 0.45) or bending over. UNTUNED.
+    head_down_min_drop: float = 0.6
+    # A box this narrow with the head at its top is a standing person (used when the hips are not
+    # found, so the torso angle is unknown). UNTUNED.
+    standing_max_aspect: float = 0.65
     # Hips must have dropped this far (fraction of standing height) for a down pose, when the
     # track was seen standing. Rejects bending over and leaning forward on a chair. UNTUNED.
     hip_down_min_drop: float = 0.35
@@ -83,8 +96,8 @@ class DetectorConfig:
     # ID-switch re-association: a new track takes over a lost one if their boxes overlap this much
     # (IoU) or their centers are within this many body lengths, and the loss was recent. UNTUNED.
     reassociate_min_iou: float = 0.3
-    reassociate_max_center_fraction: float = 1.0
-    reassociate_max_gap_seconds: float = 1.0
+    reassociate_max_center_fraction: float = 1.5
+    reassociate_max_gap_seconds: float = 2.5
     # A down-pose track overlapping the victim this much is a duplicate, not a helper. UNTUNED.
     duplicate_min_iou: float = 0.6
     # Standing samples (seconds) averaged into the standing height reference. UNTUNED.
@@ -135,10 +148,10 @@ class Settings:
     """Runtime settings for main.py and the event client."""
 
     camera_index: int = 0
-    camera_id: str = "cam-lobby-1"
+    camera_id: str = "webcam-1"
     agent_url: str = "http://localhost:8000"
     # Pose model; downloaded by Ultralytics on first use into this git-ignored path.
-    model_path: str = str(REPO_ROOT / ".cache" / "models" / "yolov8n-pose.pt")
+    model_path: str = str(REPO_ROOT / ".cache" / "models" / "yolo11s-pose.pt")
     # Ultralytics tracker config (bytetrack.yaml ships with the package and is the lightest).
     tracker: str = "bytetrack.yaml"
     imgsz: int = 640
@@ -149,6 +162,14 @@ class Settings:
     http_timeout_seconds: float = 2.0
     http_max_attempts: int = 4
     http_backoff_seconds: float = 0.25
+    # Fire / smoke detection (vision/fire.py). Empty model path turns it off.
+    fire_model_path: str = str(REPO_ROOT / ".cache" / "models" / "fire-world.pt")
+    fire_conf: float = 0.25
+    # Run the fire model on every Nth frame (it shares the GPU with the pose model).
+    fire_every: int = 3
+    # Annotated feed for the dashboard (vision/stream.py). Port 0 turns it off.
+    stream_host: str = "127.0.0.1"
+    stream_port: int = 8001
 
 
 def load_dotenv_if_available() -> None:
@@ -179,4 +200,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         http_timeout_seconds=float(get("VISION_HTTP_TIMEOUT_SECONDS", str(d.http_timeout_seconds))),
         http_max_attempts=int(get("VISION_HTTP_MAX_ATTEMPTS", str(d.http_max_attempts))),
         http_backoff_seconds=float(get("VISION_HTTP_BACKOFF_SECONDS", str(d.http_backoff_seconds))),
+        fire_model_path=get("VISION_FIRE_MODEL", d.fire_model_path),
+        fire_conf=float(get("VISION_FIRE_CONF", str(d.fire_conf))),
+        fire_every=max(1, int(get("VISION_FIRE_EVERY", str(d.fire_every)))),
+        stream_host=get("VISION_STREAM_HOST", d.stream_host),
+        stream_port=int(get("VISION_STREAM_PORT", str(d.stream_port))),
     )

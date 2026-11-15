@@ -83,6 +83,10 @@ class PoseFeatures:
     center: tuple[float, float]
     wrist_rise: float | None  # (higher shoulder y - higher wrist y) / body_len; > 0 means above
     limbs: dict[str, tuple[float, float] | None]  # wrist and ankle positions for oscillation
+    legs_visible: bool = True  # at least one knee or ankle seen (False: the body is cut off)
+    head_y: float | None = None  # image y of the visible head and shoulder points (mean)
+    axis_angle: float | None = None  # head-to-lowest-visible-body-point line, degrees from vertical
+    top_y: float = 0.0  # top edge of the box
 
 
 # ---------------------------------------------------------------------------
@@ -156,6 +160,33 @@ def thigh_angle(kpts: np.ndarray, kp_conf: np.ndarray | None = None, min_conf: f
     return float(np.mean(angles))
 
 
+HEAD_POINTS = (NOSE, L_EYE, R_EYE, L_EAR, R_EAR, L_SHOULDER, R_SHOULDER)
+
+
+def _mean_of(kpts: np.ndarray, kp_conf: np.ndarray | None, idxs: tuple[int, ...], min_conf: float) -> np.ndarray | None:
+    pts = [p for i in idxs if (p := _point(kpts, kp_conf, i, min_conf)) is not None]
+    return None if not pts else np.mean(np.asarray(pts, dtype=float), axis=0)
+
+
+def head_height(kpts: np.ndarray, kp_conf: np.ndarray | None = None, min_conf: float = 0.5) -> float | None:
+    """Image y of the head and shoulders (mean of the visible points). Webcams see these reliably."""
+    p = _mean_of(kpts, kp_conf, HEAD_POINTS, min_conf)
+    return None if p is None else float(p[1])
+
+
+def body_axis_angle(kpts: np.ndarray, kp_conf: np.ndarray | None = None, min_conf: float = 0.5) -> float | None:
+    """Angle from vertical of the line from the head to the lowest visible body part (ankles, else
+    knees, else hips). Works when the hips are not found, which is common on a laptop webcam."""
+    head = _mean_of(kpts, kp_conf, HEAD_POINTS, min_conf)
+    if head is None:
+        return None
+    for group in ((L_ANKLE, R_ANKLE), (L_KNEE, R_KNEE), (L_HIP, R_HIP)):
+        low = _mean_of(kpts, kp_conf, group, min_conf)
+        if low is not None:
+            return angle_from_vertical(head, low)
+    return None
+
+
 def bbox_aspect(bbox: BBox) -> float:
     """Width / height of the box. A degenerate box with no height is treated as infinitely wide."""
     x1, y1, x2, y2 = bbox
@@ -201,6 +232,9 @@ def wrist_above_shoulder(
     return rise is not None and rise >= margin
 
 
+LEG_POINTS = (13, 14, 15, 16)  # COCO knees and ankles
+
+
 def compute_features(obs: TrackObs, min_conf: float = 0.5) -> PoseFeatures:
     """All single-frame features of one tracked person."""
     x1, y1, x2, y2 = (float(v) for v in obs.bbox)
@@ -224,6 +258,10 @@ def compute_features(obs: TrackObs, min_conf: float = 0.5) -> PoseFeatures:
         center=((x1 + x2) / 2.0, (y1 + y2) / 2.0),
         wrist_rise=wrist_rise(kpts, body_len, conf, min_conf),
         limbs=limbs,
+        legs_visible=any(_visible(conf, i, min_conf) for i in LEG_POINTS),
+        head_y=head_height(kpts, conf, min_conf),
+        axis_angle=body_axis_angle(kpts, conf, min_conf),
+        top_y=y1,
     )
 
 

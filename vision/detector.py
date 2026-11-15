@@ -73,8 +73,9 @@ class _Sample:
 @dataclass
 class StandingRef:
     height: float  # bbox height while standing, pixels
-    hip_y: float  # hip image y while standing
+    hip_y: float | None  # hip image y while standing (None when the hips were not found)
     t: float  # time of the latest standing sample used
+    head_y: float | None = None  # head image y while standing
 
 
 @dataclass
@@ -90,7 +91,7 @@ class TrackState:
     last_down_t: float | None = None
     ref: StandingRef | None = None
     history: deque[_Sample] = field(default_factory=deque)
-    standing: deque[tuple[float, float, float]] = field(default_factory=deque)  # (t, bbox_h, hip_y)
+    standing: deque[tuple[float, float, float | None, float | None]] = field(default_factory=deque)  # (t, h, hip_y, head_y)
 
 
 @dataclass
@@ -124,23 +125,52 @@ def is_standing(f: PoseFeatures, cfg: DetectorConfig) -> bool:
     return f.thigh_angle is None or f.thigh_angle <= cfg.thigh_standing_deg
 
 
-def is_down_pose(f: PoseFeatures, ref: StandingRef | None, cfg: DetectorConfig) -> bool:
-    """Spec 9.9 down pose: torso near horizontal or bbox w/h > 1.3, with the sitting guards."""
-    if is_upright(f, cfg):
-        return False  # standing, sitting on a chair or the floor, kneeling upright
-    horizontal = f.torso_angle is not None and f.torso_angle >= cfg.torso_down_deg
-    wide = f.aspect > cfg.down_aspect_ratio
-    if not (horizontal or wide):
-        return False
-    # Seen standing before: the hips must also have dropped toward the floor. This rejects
-    # bending over and leaning forward on a chair.
-    hips_high = (
-        ref is not None
-        and f.hip_y is not None
-        and ref.height > 0
-        and (f.hip_y - ref.hip_y) / ref.height < cfg.hip_down_min_drop
+def looks_standing(f: PoseFeatures, cfg: DetectorConfig) -> bool:
+    """Standing: the torso test when the hips are found, else a tall narrow box with the head on top."""
+    if f.torso_angle is not None:
+        return is_standing(f, cfg)
+    return (
+        f.head_y is not None
+        and f.legs_visible
+        and f.aspect < cfg.standing_max_aspect
+        and f.bbox_h > 0
+        and (f.head_y - f.top_y) / f.bbox_h < 0.3
     )
-    return not hips_high
+
+
+def head_drop(f: PoseFeatures, ref: StandingRef | None) -> float | None:
+    """How far the head is below its standing height, as a fraction of standing height."""
+    if ref is None or ref.head_y is None or f.head_y is None or ref.height <= 0:
+        return None
+    return (f.head_y - ref.head_y) / ref.height
+
+
+def is_down_pose(f: PoseFeatures, ref: StandingRef | None, cfg: DetectorConfig) -> bool:
+    """Lying down, by any of: the torso is horizontal, the head-to-feet line is horizontal, or the
+    head has dropped most of the way to the floor since the person was seen standing.
+
+    Webcams often miss the hips, so the torso test alone is not enough. A crop (head and shoulders
+    only, someone close to the camera) never counts: each test needs a body part below the waist
+    or a standing reference taken from a full view."""
+    drop = head_drop(f, ref)
+    head_down = drop is not None and drop >= cfg.head_down_min_drop
+    if is_upright(f, cfg) and not head_down:
+        return False  # standing, sitting on a chair or the floor, kneeling upright
+    torso_flat = f.torso_angle is not None and f.torso_angle >= cfg.torso_down_deg and f.legs_visible
+    axis_flat = f.axis_angle is not None and f.axis_angle >= cfg.axis_down_deg
+    wide = f.aspect > cfg.down_aspect_ratio and f.torso_angle is not None and f.legs_visible
+    if not (torso_flat or axis_flat or wide or head_down):
+        return False
+    if head_down:
+        return True
+    # Seen standing before: the hips (or head) must also have dropped toward the floor. This
+    # rejects bending over and leaning forward on a chair.
+    if ref is not None and ref.height > 0:
+        if f.hip_y is not None and ref.hip_y is not None:
+            return (f.hip_y - ref.hip_y) / ref.height >= cfg.hip_down_min_drop
+        if drop is not None:
+            return drop >= cfg.hip_down_min_drop
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -175,6 +205,29 @@ class Detector:
 
     def is_victim(self, track_id: int) -> bool:
         return self.victim is not None and self.victim.current_id == track_id
+
+    def explain(self, track_id: int) -> str:
+        """One short line on why this track does or does not count as down (overlay and debug log)."""
+        st = self.tracks.get(track_id)
+        if st is None:
+            return ""
+        f, cfg = st.last_features, self.cfg
+        drop = head_drop(f, st.ref)
+        parts = [
+            "line ?" if f.axis_angle is None else f"line {f.axis_angle:.0f}deg",
+            "head drop ?" if drop is None else f"head drop {drop:.0%}",
+            f"w/h {f.aspect:.2f}",
+        ]
+        if st.down_now:
+            held = 0.0 if st.down_since is None else self._t - st.down_since
+            parts.append(f"DOWN {held:.1f}s" + (" (seen falling)" if self._witnessed(st) else ""))
+        elif st.ref is None:
+            parts.append("no standing view yet")
+        elif looks_standing(f, cfg):
+            parts.append("standing")
+        else:
+            parts.append("not down")
+        return "  ".join(parts)
 
     def update(self, t: float, observations: list[TrackObs]) -> list[VisionEvent]:
         """Feed one frame. Returns the events to send, in order."""
@@ -259,14 +312,17 @@ class Detector:
         st.last_bbox = o.bbox
         st.last_features = f
 
-        if is_standing(f, cfg) and f.hip_y is not None and f.bbox_h > 0:
-            st.standing.append((t, f.bbox_h, f.hip_y))
+        if looks_standing(f, cfg) and (f.hip_y is not None or f.head_y is not None) and f.bbox_h > 0:
+            st.standing.append((t, f.bbox_h, f.hip_y, f.head_y))
             while st.standing and st.standing[0][0] < t - cfg.standing_ref_seconds:
                 st.standing.popleft()
+            hips = [s[2] for s in st.standing if s[2] is not None]
+            heads = [s[3] for s in st.standing if s[3] is not None]
             st.ref = StandingRef(
                 height=float(np.median([s[1] for s in st.standing])),
-                hip_y=float(np.median([s[2] for s in st.standing])),
+                hip_y=float(np.median(hips)) if hips else None,
                 t=t,
+                head_y=float(np.median(heads)) if heads else None,
             )
 
         down = is_down_pose(f, st.ref, cfg)
@@ -293,14 +349,16 @@ class Detector:
     # -- incident start -----------------------------------------------------------------------
 
     def _maybe_start_incident(self, t: float, present: list[TrackState], events: list[VisionEvent]) -> None:
-        ready = [
-            st
-            for st in present
-            if st.phase == DOWN_PENDING
-            and st.down_now
-            and st.down_since is not None
-            and t - st.down_since >= self.cfg.down_seconds
-        ]
+        cfg = self.cfg
+        fast = min(cfg.witnessed_down_seconds, cfg.down_seconds)
+        ready = []
+        for st in present:
+            if st.phase != DOWN_PENDING or not st.down_now or st.down_since is None:
+                continue
+            held = t - st.down_since
+            # A witnessed fall alerts after a short hold; anything slower waits DOWN_SECONDS.
+            if held >= cfg.down_seconds or (held >= fast and self._witnessed(st)):
+                ready.append(st)
         if not ready:
             return
         st = min(ready, key=lambda s: (s.down_since, s.track_id))
@@ -328,7 +386,12 @@ class Detector:
         if st.ref is None or st.down_since is None or st.ref.height <= 0:
             return False
         w = cfg.witnessed_window_seconds
-        samples = [(s.t, s.f.hip_y) for s in st.history if s.f.hip_y is not None]
+        # Hips when found, else the head: a fast drop of either is a fall someone saw happen.
+        use_hips = st.ref.hip_y is not None and sum(s.f.hip_y is not None for s in st.history) >= 3
+        if use_hips:
+            samples = [(s.t, s.f.hip_y) for s in st.history if s.f.hip_y is not None]
+        else:
+            samples = [(s.t, s.f.head_y) for s in st.history if s.f.head_y is not None]
         best = 0.0
         for ti, yi in samples:
             if not (st.down_since - w <= ti <= st.down_since + w):
@@ -354,7 +417,7 @@ class Detector:
             if vst.down_now:
                 v.body_len = f.body_len
 
-            if is_standing(f, cfg) and not vst.down_now:
+            if looks_standing(f, cfg) and not vst.down_now:
                 v.standup_since = t if v.standup_since is None else v.standup_since
                 if t - v.standup_since >= cfg.standup_clear_seconds:
                     self._clear_victim(vst)

@@ -17,6 +17,8 @@ import httpx
 import numpy as np
 import pytest
 
+from vision.fire import FireBox
+
 pytest.importorskip("cv2", reason="needs the vision extra: uv sync --extra vision")
 
 from vision import client as C
@@ -352,16 +354,15 @@ def test_loop_quits_on_q_and_resets_on_r():
     assert n == 3 and resets == [True]
 
 
-def test_overlay_is_skeletons_on_black():
+def test_overlay_draws_on_a_copy_of_the_frame():
     det = Detector()
     tracks = [S.obs(1, S.standing())]
     det.update(0.0, tracks)
-    img = M.render_overlay((480, 640, 3), tracks, det, ["status"])
-    assert img.shape == (480, 640, 3)
-    assert img.dtype == np.uint8
-    assert img.any()
-    # Mostly black: only lines, joints and text are drawn.
-    assert (img.sum(axis=2) == 0).mean() > 0.9
+    src = np.full((480, 640, 3), 50, dtype=np.uint8)
+    img = M.render_overlay(src, tracks, det, ["status"], [FireBox("fire", 0.9, (10, 10, 60, 60))], True)
+    assert img.shape == (480, 640, 3) and img.dtype == np.uint8
+    assert (src == 50).all()  # the camera frame itself is untouched
+    assert (img != 50).any()  # boxes, skeleton, labels and the banner were drawn
 
 
 def test_describe_hides_snapshot():
