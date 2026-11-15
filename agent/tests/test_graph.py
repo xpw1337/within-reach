@@ -79,6 +79,20 @@ async def test_3_found_down_no_tap_no_responders_briefing_only_at_60s(tmp_path):
         assert rt.store.incidents[iid]["collapse_at"] is None
 
 
+async def test_3b_no_confirm_mode_found_down_alerts_responders_after_voice_check(tmp_path):
+    from agent.live.config import LiveConfig
+
+    async with runtime(tmp_path, cfg=LiveConfig(require_confirm=False)) as rt:
+        iid = await start(rt, witnessed=False)
+        assert wave_dispatches(rt) == []  # nothing before the voice check
+        await rt.clock.advance(5)  # voice check ends, classified cardiac
+        assert "cardiac_main" in rt.speaker.played()
+        assert len(wave_dispatches(rt, 1)) == 4
+        assert [c["kind"] for c in rt.telephony.calls].count("briefing") == 1
+        inc = rt.store.incidents[iid]
+        assert inc["confirmed_by"] == "auto" and inc["status"] == "responding"
+
+
 async def test_4_raised_hand_is_fall_staff_then_briefing_at_60s_unless_cancelled(tmp_path):
     async with runtime(tmp_path) as rt:
         iid = await start(rt)
