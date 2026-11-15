@@ -41,7 +41,7 @@ Legend: done = pushed and verified offline; partial = pushed, more to do; -- = n
 | 3.1 to 3.8 | done offline | 0629313 to 71fb735; follow-ups a085f76, 3dc92bb, 07638bd (first ring) |
 | 4.1 to 4.5, 4.7 | done offline | 4bbb297 to 1451d7a; follow-up 884586d (approved scripts, event payloads, call_sid) |
 | 4.6, 4.8 | partial | d2de5d7 (calls over Photon SIP). Real calls and collapse-to-first-ring need Twilio credentials, a Photon number and a human |
-| 4.9 | done offline | 8a92ce4 (Photon iMessage alerts, follow-ups, replies, webhook). Real sends need line assignments, phones that text the line first, and the webhook secret; steps in agent/README.md |
+| 4.9 | send verified | 8a92ce4 (Photon iMessage alerts, follow-ups, replies, webhook). 2026-11-14: a real text through `PhotonMessenger` on the shared line reached the team lead's phone (API call 1.43 s; receipt confirmed by the team lead). Inbound replies are not verified yet: they need the tunnel, the webhook destination and its secret; steps in agent/README.md |
 | 5.1 to 5.3 | done offline | 2af4e8d to 53d7973, 7821284. Live webcam steps in vision/README.md |
 | 5.4 | code done | 0ec1961. Six clips need humans |
 | 5.5 to 5.8 | done offline | 3a741e9 to 6285bf1, 2d27b2f (adopt seeded responder by phone). Device steps in mobile/README.md |
@@ -68,7 +68,7 @@ Contract fix 2026-11-14: `camera_routes.directions` excludes the distance (spec 
 
 ## Waiting on a person
 
-- Photon is set up for solo testing (values only in the untracked `.env` and `supabase/seed.local.sql`): a voice-enabled number with the default SIP Voice profile and MD5 outbound; the team lead's phone is on the shared iMessage line and plays teammate B (public, callable: it gets the responder call), the caller of record and the sim-911 dispatcher. Still needed: that phone texts its assigned shared line once (opt-in is pending), a Twilio account (it runs the calls), and the webhook destination once the tunnel exists. Swap the dispatcher to a teammate's phone before the real demo.
+- Photon is set up for solo testing (values only in the untracked `.env` and `supabase/seed.local.sql`): a voice-enabled number with the default SIP Voice profile and MD5 outbound; the team lead's phone is on the shared iMessage line and plays teammate B (public, callable: it gets the responder call), the caller of record and the sim-911 dispatcher. That phone has opted in and received a real test text. Still needed: a Twilio account (it runs the calls), and the webhook destination once the tunnel exists. Swap the dispatcher to a teammate's phone before the real demo.
 
 - Bedrock model access for Sonnet 5.5 and Haiku 5.5 (access-controlled), or an Anthropic API key.
 - Someone to check the occupancy factors against the ICC text of IBC 2021 Table 1004.5.
