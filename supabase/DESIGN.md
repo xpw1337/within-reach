@@ -9,6 +9,7 @@
 | `migrations/0003_storage.sql` | written | Buckets from `docs/CONTRACTS.md` §5. |
 | `migrations/0004_run_cost.sql` | written | `add_run_cost(run_id, delta)`: atomic increment of `runs.est_cost_usd` for `shared/llm.py` metering. A function only, no table change. |
 | `seed.sql` | written | Demo rows from spec §12. Fictional 555-01xx phones only. |
+| `seed_demo.sql` | written | The same eight responders and a placeholder caller of record on the demo building (`DEMO-RABINOWITZ`, camera `cam-atrium-1`). The last seed file run decides where the responders are. |
 | `seed.local.example.sql` | written | Template for the git-ignored `seed.local.sql` with real teammate numbers. |
 
 ## 0002_demo_policies.sql
@@ -37,6 +38,9 @@
 apply migrations 0001..0004
 python -m data.load --fallback
 psql < supabase/seed.sql   (and seed.local.sql)
+# live demo on Rabinowitz Hall instead (CAMERA_ID=cam-atrium-1 in .env):
+python -m data.load --file demo/rabinowitz/building.json
+psql < supabase/seed_demo.sql   (then seed.local.sql)
 python -m census.cli rerun --building <fallback id>     # coverage, scores, fix, documents, camera_routes
 # agent startup renders camera audio if missing
 ```

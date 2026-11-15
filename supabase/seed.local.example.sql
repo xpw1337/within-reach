@@ -8,6 +8,7 @@ update public.responders set name = 'TEAMMATE_A_NAME', phone = 'TEAMMATE_A_PHONE
 update public.responders set name = 'TEAMMATE_B_NAME', phone = 'TEAMMATE_B_PHONE'
  where id = 'a0000000-0000-4000-8000-000000000002';
 
--- Caller of record for the 911 briefing (spec section 12: a teammate).
+-- Caller of record for the 911 briefing (spec section 12: a teammate), on the fallback and the
+-- demo building.
 update public.buildings set monitoring_callback = 'MONITORING_CALLBACK_PHONE'
- where costar_property_id = 'FALLBACK-1';
+ where costar_property_id in ('FALLBACK-1', 'DEMO-RABINOWITZ');
