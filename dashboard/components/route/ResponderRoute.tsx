@@ -155,7 +155,7 @@ export function ResponderRoute({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-3 sm:p-4">
+    <div data-responder-page className="mx-auto flex w-full max-w-3xl flex-col gap-3 p-3 sm:p-4">
       <header className="flex flex-col gap-1">
         <div className="label">{data.building?.name ?? "Building"}</div>
         <h1 className="text-xl font-bold text-text">{title}</h1>
@@ -194,7 +194,7 @@ export function ResponderRoute({
               flyPath={fly?.path ?? null}
               flyKey={fly?.key ?? null}
               extraTags={extraTags}
-              height="min(62dvh, 640px)"
+              height="min(55dvh, 640px)"
             />
           ) : bounds ? (
             <FloorHeatmap

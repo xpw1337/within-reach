@@ -62,7 +62,7 @@ export function AgentConsole() {
 
   if (collapsed) {
     return (
-      <aside className="flex shrink-0 border-t border-line bg-panel lg:w-12 lg:flex-col lg:border-t-0 lg:border-l">
+      <aside data-agent-console className="flex shrink-0 border-t border-line bg-panel lg:w-12 lg:flex-col lg:border-t-0 lg:border-l">
         <button
           type="button"
           onClick={() => setCollapsed(false)}
@@ -80,7 +80,7 @@ export function AgentConsole() {
   }
 
   return (
-    <aside className="flex max-h-[42vh] shrink-0 flex-col border-t border-line bg-panel lg:max-h-none lg:w-[400px] lg:border-t-0 lg:border-l 2xl:w-[440px]">
+    <aside data-agent-console className="flex max-h-[42vh] shrink-0 flex-col border-t border-line bg-panel lg:max-h-none lg:w-[400px] lg:border-t-0 lg:border-l 2xl:w-[440px]">
       <header className="flex items-center gap-2 border-b border-line px-4 py-2.5">
         <Dot tone={liveTone} />
         <h2 className="text-sm font-bold tracking-tight">Agent console</h2>

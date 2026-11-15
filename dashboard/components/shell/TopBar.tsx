@@ -78,7 +78,7 @@ export function TopBar() {
           : "Agent API: not configured";
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-6 border-b border-line bg-panel px-5">
+    <header data-topbar className="flex h-14 shrink-0 items-center gap-6 border-b border-line bg-panel px-5">
       <Link href="/" className="flex items-center gap-2.5">
         <span className="relative flex size-6 items-center justify-center">
           <span className="absolute inset-0 rounded-full border-2 border-accent/40" />

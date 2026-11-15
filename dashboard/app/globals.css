@@ -285,3 +285,10 @@ body {
     border: none !important;
   }
 }
+
+/* The responder route page (/building/[id]/route) opens on a phone from an alert: hide the desk
+   chrome (top bar and agent console) so the route and its buttons fill the screen. */
+body:has([data-responder-page]) [data-agent-console],
+body:has([data-responder-page]) [data-topbar] {
+  display: none;
+}
