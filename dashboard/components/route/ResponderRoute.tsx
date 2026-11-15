@@ -1,11 +1,12 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { FloorHeatmap } from "@/components/building/FloorHeatmap";
 import { matterportAvailable } from "@/components/building/MatterportTwin";
 import { Button, EmptyState, Segmented } from "@/components/ui";
 import { assetDisplayLabel, copy } from "@/lib/copy";
+import { distanceToPathPoint, latLngToPlan, nearestPathIndex, type GeorefTransform } from "@/lib/georef";
 import { boundsOf, floorOf, indexCoverage } from "@/lib/heatmap";
 import { UUID_RE, useBuilding } from "@/lib/hooks/useBuilding";
 import { useRealtimeTable } from "@/lib/hooks/useRealtimeTable";
@@ -32,7 +33,9 @@ function hashKey(text: string): number {
 /**
  * The responder's route in the 3D twin, opened from "View route in 3D" in the app
  * (mobile/app/alert/[dispatchId].tsx). One leg at a time: to the AED, then to the person.
- * The view moves one scan point at a time with Back / Next, or walks the whole leg.
+ * The view moves one scan point at a time with Back / Next, or walks the whole leg. With the
+ * building's calibration in the link (`geo`), it follows the helper: each GPS update moves the view
+ * to the route's scan point nearest to the phone (team lead, 2026-11-15: treat GPS as accurate).
  */
 export function ResponderRoute({
   buildingId,
@@ -40,12 +43,14 @@ export function ResponderRoute({
   leg: legParam,
   from,
   role,
+  geo,
 }: {
   buildingId: string;
   cameraId: string | null;
   leg: Leg | null;
   from: string | null;
   role: string | null;
+  geo: GeorefTransform | null;
 }) {
   const valid = UUID_RE.test(buildingId);
   const data = useBuilding(valid ? buildingId : "");
@@ -98,12 +103,41 @@ export function ResponderRoute({
   const step = current.step;
   const fly = current.fly;
 
+  // Follow the phone: on by default when the link carries the calibration; Back / Next pause it.
+  const [following, setFollowing] = useState(true);
+  const [gps, setGps] = useState<"on" | "denied" | "error" | null>(null);
+  const byId = useMemo(() => new Map(data.nodes.map((n) => [n.sweep_id, n])), [data.nodes]);
+  const geoKey = geo ? `${geo.originLat},${geo.originLng},${geo.rotationDeg},${geo.tx},${geo.tz}` : "";
+  useEffect(() => {
+    if (!geo || !following || !planKey || typeof navigator === "undefined" || !navigator.geolocation) return;
+    const path = planKey.split(">");
+    const watch = navigator.geolocation.watchPosition(
+      (pos) => {
+        setGps("on");
+        const p = latLngToPlan(geo, { lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setNav((n) => {
+          const cur = n.plan === planKey ? n.step : 0;
+          const i = nearestPathIndex(path, byId, p);
+          // Move only to a point at least 1 m closer than the current one, so jitter does not flip the view.
+          if (i < 0 || i === cur || distanceToPathPoint(path, byId, i, p) + 1 > distanceToPathPoint(path, byId, cur, p)) return n;
+          return { plan: planKey, step: i, fly: { path: [path[i]], key: -(n.seq + 1) }, seq: n.seq + 1 };
+        });
+      },
+      (err) => setGps(err.code === err.PERMISSION_DENIED ? "denied" : "error"),
+      { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 },
+    );
+    return () => navigator.geolocation.clearWatch(watch);
+    // geoKey stands for geo; planKey for the path.
+  }, [geoKey, following, planKey, byId]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const goTo = (i: number) => {
+    setFollowing(false);
     const j = Math.max(0, Math.min(plan.path.length - 1, i));
     setNav((n) => ({ plan: planKey, step: j, fly: { path: [plan.path[j]], key: -(n.seq + 1) }, seq: n.seq + 1 }));
   };
   const walkAll = () => {
     if (plan.path.length < 2) return;
+    setFollowing(false);
     const from0 = step >= plan.path.length - 1 ? 0 : step;
     const last = plan.path.length - 1;
     setNav((n) => ({ plan: planKey, step: last, fly: { path: plan.path.slice(from0), key: -(n.seq + 1) }, seq: n.seq + 1 }));
@@ -115,7 +149,6 @@ export function ResponderRoute({
 
   const bounds = useMemo(() => boundsOf(data.nodes), [data.nodes]);
   const index = useMemo(() => indexCoverage(data.coverage), [data.coverage]);
-  const byId = useMemo(() => new Map(data.nodes.map((n) => [n.sweep_id, n])), [data.nodes]);
   const here = plan.path.length ? byId.get(plan.path[Math.min(step, plan.path.length - 1)]) : undefined;
   const floor = here ? floorOf(here) : (camera?.floor ?? 0);
 
@@ -215,6 +248,26 @@ export function ResponderRoute({
             <EmptyState title="--">No scan graph for this building.</EmptyState>
           )}
 
+          {geo && (
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span className={gps === "denied" || gps === "error" ? "text-warn" : "text-muted"}>
+                {!following
+                  ? "Not following your location."
+                  : gps === "on"
+                    ? "Following your location: the view moves as you walk."
+                    : gps === "denied"
+                      ? "Location is off for this page. Allow it to follow you, or use Back and Next."
+                      : gps === "error"
+                        ? "No location yet. Use Back and Next, or wait for GPS."
+                        : "Waiting for your location."}
+              </span>
+              {!following && (
+                <Button size="sm" onClick={() => setFollowing(true)}>
+                  Follow me
+                </Button>
+              )}
+            </div>
+          )}
           <div className="flex items-center justify-between text-sm text-muted">
             <span>
               Point {Math.min(step + 1, plan.path.length)} of {plan.path.length}

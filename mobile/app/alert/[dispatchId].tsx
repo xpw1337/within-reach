@@ -52,7 +52,7 @@ import {
 } from '../../lib/copy';
 import { env } from '../../lib/env';
 import { buildAlertPlan, legFromStart, reachableFrom } from '../../lib/floorPlan';
-import { judgeStartFix } from '../../lib/georef';
+import { latLngToPlan, nearestNode } from '../../lib/georef';
 import { freshFix, loadActiveGeoref, type ActiveGeoref } from '../../lib/georefStore';
 import { distanceMeters, useLocationState } from '../../lib/location';
 import { useProfile } from '../../lib/profile';
@@ -241,12 +241,15 @@ export default function AlertScreen() {
   // "View route in 3D": the dashboard's responder route page (dashboard/app/building/[id]/route), with
   // this helper's leg, role and start sweep so the 3D walk matches the plan below.
   // The 3D walk starts where the phone is: the helper's start on the plan when it is already set
-  // (GPS or a tap), else a fresh GPS fix snapped to the scan the same way (calibration, accuracy and
-  // distance limits in lib/georef.ts). Without one it starts at the person, as the page's default.
-  // The runner's way back from the AED (to_person after "I have the AED") always starts at the AED.
+  // (GPS or a tap), else a fresh GPS fix snapped to the nearest scan point that can reach the goal.
+  // GPS is taken as accurate here (team lead, 2026-11-15): no accuracy or distance limit. Without a
+  // calibration or a fix it starts at the person, as the page's default. The runner's way back from
+  // the AED (to_person after "I have the AED") always starts at the AED. The calibration also goes in
+  // the link (`geo`), so the page can follow the phone's GPS as the helper walks.
   const startSweep = helperStart.start.phase === 'done' ? helperStart.start.sweepId : null;
   const fromApplies = leg !== 'with_person' && !(leg === 'to_person' && runner);
   const routeBase = env.dashboardUrl && buildingId ? `${env.dashboardUrl}/building/${encodeURIComponent(buildingId)}/route` : null;
+  const calibration = georef?.active?.georef ?? null;
   const routeUrl = (from: string | null): string | null => {
     if (!routeBase) return null;
     const query = [
@@ -254,6 +257,9 @@ export default function AlertScreen() {
       leg === 'to_aed' || leg === 'to_person' ? `leg=${leg}` : null,
       d.role ? `role=${encodeURIComponent(d.role)}` : null,
       from && fromApplies ? `from=${encodeURIComponent(from)}` : null,
+      calibration
+        ? `geo=${[calibration.originLat, calibration.originLng, calibration.rotationDeg, calibration.tx, calibration.tz].join(',')}`
+        : null,
     ]
       .filter(Boolean)
       .join('&');
@@ -261,14 +267,15 @@ export default function AlertScreen() {
   };
   const open3d = async () => {
     let from = startSweep;
-    const calibration = georef?.active?.georef ?? null;
     if (!from && fromApplies && plan && calibration && location.status === 'watching') {
       setLocating3d(true);
       const goal = leg === 'to_person' || d.role === 'patient' || !plan.aedId ? plan.personId : plan.aedId;
       const reachable = reachableFrom(plan.graph, goal);
       const fix = await freshFix();
-      const verdict = fix ? judgeStartFix(calibration, fix, [...plan.graph.nodes.values()], (id) => reachable.has(id)) : null;
-      if (verdict?.ok) from = verdict.sweepId;
+      const snap = fix
+        ? nearestNode([...plan.graph.nodes.values()].filter((n) => reachable.has(n.id)), latLngToPlan(calibration, fix))
+        : null;
+      if (snap) from = snap.node.id;
       setLocating3d(false);
     }
     const url = routeUrl(from);

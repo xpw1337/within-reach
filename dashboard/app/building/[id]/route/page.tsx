@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { ResponderRoute } from "@/components/route/ResponderRoute";
 import { EmptyState } from "@/components/ui";
+import { parseGeoParam } from "@/lib/georef";
 import { cleanLeg, cleanSweepId } from "@/lib/routePlan";
 
 function one(v: string | string[] | undefined): string | null {
@@ -9,7 +10,7 @@ function one(v: string | string[] | undefined): string | null {
 }
 
 /**
- * A responder's route in 3D: /building/{id}/route?camera=&leg=to_aed|to_person&from=<sweep>&role=
+ * A responder's route in 3D: /building/{id}/route?camera=&leg=to_aed|to_person&from=<sweep>&role=&geo=<calibration>
  * (opened from "View route in 3D" in the responder app).
  */
 export default function ResponderRoutePage({ params, searchParams }: PageProps<"/building/[id]/route">) {
@@ -28,6 +29,7 @@ export default function ResponderRoutePage({ params, searchParams }: PageProps<"
           leg={cleanLeg(sp.leg)}
           from={cleanSweepId(sp.from)}
           role={one(sp.role)}
+          geo={parseGeoParam(sp.geo)}
         />
       ))}
     </Suspense>
