@@ -77,7 +77,6 @@ demo/        fallback and demo buildings, planted AED notes
 
 | Read | For |
 |---|---|
-| [CLAUDE.md](CLAUDE.md) | The build spec: behavior, triage, data model, demo script |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Module boundaries and key decisions |
 | [docs/CONTRACTS.md](docs/CONTRACTS.md) | Every interface between modules |
 | [docs/PROGRESS.md](docs/PROGRESS.md) | What is built, how each part was verified, open items |
