@@ -224,7 +224,6 @@ export default function AlertScreen() {
   const point = incidentPoint(ctx);
   const distance = point && location.coords ? distanceMeters(location.coords, point) : null;
   const buildingId = building?.id ?? incident?.building_id ?? camera?.building_id ?? null;
-  const routeUrl = env.dashboardUrl && buildingId ? `${env.dashboardUrl}/building/${encodeURIComponent(buildingId)}` : null;
 
   const runner = d.role === 'aed_runner';
   const arrived = d.status === 'arrived' || withPerson;
@@ -234,6 +233,22 @@ export default function AlertScreen() {
   let leg: Leg | null = null;
   if (arrived) leg = 'with_person';
   else if (d.status === 'accepted' && d.role) leg = runner && aedMapped && !hasAed ? 'to_aed' : 'to_person';
+
+  // "View route in 3D": the dashboard's responder route page (dashboard/app/building/[id]/route), with
+  // this helper's leg, role and start sweep so the 3D walk matches the plan below.
+  const startSweep = helperStart.start.phase === 'done' ? helperStart.start.sweepId : null;
+  const routeQuery = [
+    camera?.id ? `camera=${encodeURIComponent(camera.id)}` : null,
+    leg === 'to_aed' || leg === 'to_person' ? `leg=${leg}` : null,
+    d.role ? `role=${encodeURIComponent(d.role)}` : null,
+    startSweep && (leg === 'to_aed' || (leg === 'to_person' && !runner)) ? `from=${encodeURIComponent(startSweep)}` : null,
+  ]
+    .filter(Boolean)
+    .join('&');
+  const routeUrl =
+    env.dashboardUrl && buildingId
+      ? `${env.dashboardUrl}/building/${encodeURIComponent(buildingId)}/route${routeQuery ? `?${routeQuery}` : ''}`
+      : null;
 
   const aedLabel = plan?.aedSimulated || (ctx?.aed?.flags ?? []).includes('simulated') ? PLAN_AED_SIMULATED : PLAN_AED;
   const stepTitle =
@@ -367,7 +382,7 @@ export default function AlertScreen() {
               <Body>{aedRoute.directions ?? '--'}</Body>
               {ctx?.aed?.label ? <Body muted>{ctx.aed.label}</Body> : null}
               <Body muted>
-                {ALERT_FROM_PERSON} {aedRoute.distance_m != null ? `${Math.round(aedRoute.distance_m)} meters` : '--'}
+                {ALERT_FROM_PERSON} {aedRoute.distance_m != null ? `${spokenMeters(aedRoute.distance_m)} meters` : '--'}
               </Body>
             </>
           ) : (
@@ -440,3 +455,11 @@ const styles = StyleSheet.create({
   step: { fontSize: 26, fontWeight: '800', color: colors.text, textAlign: 'center' },
   actions: { gap: space.md },
 });
+
+/** Whole meters rounded like the speaker (Python's round: halves go to the even number), so the
+ * screen and the spoken "{n} meters" never differ by one. */
+function spokenMeters(meters: number): number {
+  const floor = Math.floor(meters);
+  if (Math.abs(meters - floor - 0.5) < 1e-9) return floor % 2 === 0 ? floor : floor + 1;
+  return Math.round(meters);
+}

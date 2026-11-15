@@ -47,7 +47,7 @@ Env: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_D
 **Home**: on-duty toggle (`responders.on_duty`); starts the foreground location watch, writing `last_lat/lng` and `last_seen_at` at most every 15 s. The live agent requires `last_seen_at` within 10 minutes, so the app must be open.
 
 **Alert**: a new `dispatches` row for me with `status='sent'` navigates here, starts the alarm and haptics.
-- Shows role once assigned, distance, text directions from `camera_routes`, a map (`react-native-maps`) with the building and my position, and "View route in 3D" opening `EXPO_PUBLIC_DASHBOARD_URL/building/{id}` in the browser.
+- Shows role once assigned, distance, text directions from `camera_routes`, a map (`react-native-maps`) with the building and my position, and "View route in 3D" opening `EXPO_PUBLIC_DASHBOARD_URL/building/{id}/route` in the browser, with the camera, the current leg, the dispatch role and the helper's start sweep in the query (dashboard/DESIGN.md).
 - Accept -> `POST /dispatches/{id}/accept`; the response carries the role (`patient` or `aed_runner`) or `released`.
 - Can't help -> decline.
 - 20 s countdown from `sent_at`; at zero the screen closes (the agent marks the timeout).

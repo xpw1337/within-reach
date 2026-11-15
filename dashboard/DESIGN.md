@@ -51,6 +51,11 @@ Env: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_A
 - Flags (stairs-only, blocked exits, no AED visible in the scan), CoStar facts, outside panel (Vexcel image, EMS door, parking, hydrants), documents tab rendering `content_md` with a print stylesheet for the emergency card.
 - "Rerun live" button -> `POST /census/buildings/{id}/rerun` for demo step 3.
 
+**`/building/[id]/route`** (responder route in 3D, opened from "View route in 3D" in the app)
+- Query: `camera` (camera id), `leg` (`to_aed` or `to_person`), `role` (dispatch role), `from` (the helper's start sweep in the app). All optional; unknown values are ignored.
+- One leg at a time: to the AED, then "I have the AED" switches to the way back to the person. Without `from`, the AED leg starts at the person and uses the camera's census route (`camera_routes.path`), so the distance matches the speaker; with `from`, the shortest walk over `twin_nodes.neighbors` (`lib/routePlan.ts`).
+- `MatterportTwin` with a "Person down" tag at the camera sweep (and "Your start"), Back / Next one scan point at a time, or "Walk it" along the rest of the leg. The SVG plan with the same route is the fallback and the "Plan" toggle. A team-placed AED keeps its demo label and the dashed-outline note.
+
 **`/handcheck`**
 - Loads `GET /census/handcheck?n=30`; one crop at a time with Correct / Incorrect / Unsure (keyboard shortcuts). Shows "x / y correct" from the summary endpoint, real counts only.
 

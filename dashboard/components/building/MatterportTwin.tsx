@@ -50,6 +50,7 @@ export function MatterportTwin({
   showProposed = false,
   flyPath,
   flyKey,
+  extraTags = [],
   height = 560,
 }: {
   modelId: string | null;
@@ -59,7 +60,10 @@ export function MatterportTwin({
   /** Sweep ids to fly along; a new flyKey restarts the flight. */
   flyPath?: string[] | null;
   flyKey?: number | null;
-  height?: number;
+  /** Tags that are not assets (for example the person on a responder route), at a sweep's position. */
+  extraTags?: { key: string; label: string; sweep_id: string; color: { r: number; g: number; b: number } }[];
+  /** CSS height: pixels, or any CSS length such as "60dvh". */
+  height?: number | string;
 }) {
   const el = useRef<HTMLDivElement>(null);
   const sdkRef = useRef<MpSdkLite | null>(null);
@@ -69,7 +73,14 @@ export function MatterportTwin({
 
   const tagDescriptors = useEffectEvent(() => {
     const pos = new Map(nodes.map((n) => [n.sweep_id, n]));
-    return assets
+    const extra = extraTags
+      .map((t) => {
+        const n = pos.get(t.sweep_id);
+        if (!n || typeof n.x !== "number" || typeof n.y !== "number" || typeof n.z !== "number") return null;
+        return { label: t.label, anchorPosition: { x: n.x, y: n.y, z: n.z }, stemVector: { x: 0, y: 0.3, z: 0 }, color: t.color };
+      })
+      .filter((t): t is NonNullable<typeof t> => t !== null);
+    const assetTags = assets
       .filter((a) => (a.source === "proposed" ? showProposed : true) && TAG_COLOR[a.type])
       .map((a) => {
         const n = a.sweep_id ? pos.get(a.sweep_id) : undefined;
@@ -91,6 +102,7 @@ export function MatterportTwin({
         };
       })
       .filter((t): t is NonNullable<typeof t> => t !== null);
+    return [...assetTags, ...extra];
   });
 
   useEffect(() => {
@@ -133,7 +145,7 @@ export function MatterportTwin({
   }, [modelId]);
 
   // Tags, added once per connection and scenario.
-  const tagKey = `${status}|${showProposed}|${assets.length}`;
+  const tagKey = `${status}|${showProposed}|${assets.length}|${extraTags.map((t) => t.key).join(",")}`;
   useEffect(() => {
     const sdk = sdkRef.current;
     if (status !== "ready" || !sdk || tagsFor === tagKey) return;
