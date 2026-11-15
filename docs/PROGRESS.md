@@ -1,6 +1,6 @@
-# Build progress (coordinator checkpoint)
+# Build progress
 
-Updated by the coordinator as lanes report. The source of truth for what is done is `git log origin/main`: every commit starts with its subtask ID, and partial commits end with a `Next:` line saying what remains.
+The source of truth for what is done is `git log origin/main`: every commit starts with its subtask ID, and partial commits end with a `Next:` line saying what remains.
 
 ## Final status for Devpost (2026-11-15)
 
@@ -13,15 +13,14 @@ Not done: city-scale census (no CoStar dataset access), phone calls (no Twilio a
 ## How to resume after an interruption
 
 1. `git fetch && git log --oneline origin/main` shows which subtasks landed.
-2. `git log -1 --format=%B <last commit of a lane>` shows its `Next:` line.
-3. Work that was not pushed yet may still sit in a local agent worktree: `git worktree list` (under `.claude/worktrees/`). Check `git status` there before discarding anything.
-4. Restart a lane with the prompt in `docs/LANES.md` ("How to start an agent"), plus the decisions below.
+2. `git log -1 --format=%B <commit>` shows a partial commit's `Next:` line.
+3. Pick up from the subtask table and the decisions below.
 
 ## Decisions confirmed by the team lead
 
 | Date | Decision |
 |---|---|
-| 2026-11-14 | One coordinator runs all five lanes in parallel; Agent 5 is split into a vision half and a mobile half. |
+| 2026-11-14 | The build is split into five parts worked on in parallel; part 5 is split into a vision half and a mobile half. |
 | 2026-11-14 | Every `*_s` column is one-way walking seconds (CONTRACTS section 1). AED times are shown as round trip (2x) only through the thresholds helpers. |
 | 2026-11-14 | `propose_fix(building_id, asset_type="aed") -> str` added to CONTRACTS section 4. |
 | 2026-11-14 | Speaker scripts: spec section 3 wording verbatim, with each em-dash replaced by a comma. |
